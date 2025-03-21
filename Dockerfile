@@ -12,36 +12,26 @@ RUN npm ci
 # Copy source files
 COPY . .
 
-# Build frontend and server
+# Build frontend
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY
-ARG TELEGRAM_BOT_TOKEN
 
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
 ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
-ENV TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
 
 RUN npm run build
 
-# Production stage
-FROM node:18-alpine
+# Production stage with Nginx
+FROM nginx:alpine
 
-WORKDIR /app
-
-# Copy package files and install production dependencies
-COPY package*.json ./
-RUN npm ci --omit=dev
+# Copy Nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built files from builder
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/api ./api
-
-# Set runtime environment variables
-ENV NODE_ENV=production
-ENV PORT=3000
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Expose port
-EXPOSE 3000
+EXPOSE 80
 
-# Start both the server and the Telegram bot
-CMD ["node", "api/index.js"]
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]
