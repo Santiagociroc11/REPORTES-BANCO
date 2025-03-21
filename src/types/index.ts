@@ -10,6 +10,7 @@ export interface Transaction {
   type: 'ingreso' | 'gasto';
   notification_email?: string;
   custom_category?: CustomCategory;
+  banco: string;
 }
 
 export interface CustomCategory {

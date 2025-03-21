@@ -57,7 +57,7 @@ export function SummaryCards({ transactions }: SummaryCardsProps) {
       <div className="hidden md:block bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-700">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-400">Total Mostrado</p>
+            <p className="text-sm font-medium text-gray-400">Total Gastos</p>
             <p className="text-2xl font-bold text-white">
               ${totalAmount.toLocaleString('es-CO', { minimumFractionDigits: 2 })}
             </p>
