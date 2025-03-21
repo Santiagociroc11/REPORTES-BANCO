@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import cors from 'cors';
 
+// Load environment variables
 dotenv.config();
 
 const app = express();
@@ -15,8 +16,19 @@ const supabase = createClient(
   process.env.VITE_SUPABASE_ANON_KEY
 );
 
-const bot = new Telegram
-Bot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
+// Validate required environment variables
+if (!process.env.TELEGRAM_BOT_TOKEN) {
+  console.error('TELEGRAM_BOT_TOKEN is not set in environment variables');
+  process.exit(1);
+}
+
+if (!process.env.VITE_SUPABASE_URL || !process.env.VITE_SUPABASE_ANON_KEY) {
+  console.error('Supabase configuration is missing in environment variables');
+  process.exit(1);
+}
+
+// Initialize bot with polling enabled
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
 
 const CATEGORIES = [
   'Alimentación',
@@ -672,6 +684,11 @@ app.post('/api/notify', async (req, res) => {
   }
 });
 
+// Health check endpoint
+app.get('/health', (_, res) => {
+  res.send('OK');
+});
+
 // Utilidad para dividir arrays en chunks
 function chunk(array, size) {
   const chunks = [];
@@ -681,7 +698,16 @@ function chunk(array, size) {
   return chunks;
 }
 
+// Error handling for bot
+bot.on('error', (error) => {
+  console.error('Telegram bot error:', error);
+});
+
+bot.on('polling_error', (error) => {
+  console.error('Polling error:', error);
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`API y bot de Telegram ejecutándose en el puerto ${PORT}`);
+  console.log(`API server running on port ${PORT}`);
 });
