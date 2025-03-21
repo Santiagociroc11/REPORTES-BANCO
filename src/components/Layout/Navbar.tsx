@@ -32,7 +32,7 @@ export function Navbar({
             <div className="flex-shrink-0 flex items-center">
               <Wallet className="h-8 w-8 text-blue-400" />
               <span className="ml-2 text-xl font-bold text-white hidden md:block">
-                FinanceTracker
+                AutoFinanzas Scc
               </span>
             </div>
           </div>
