@@ -23,7 +23,7 @@ interface TransactionDetailModalProps {
 function TransactionDetailModal({ transaction, onClose, onReport, categories }: TransactionDetailModalProps) {
   if (!transaction) return null;
 
-  const categoryName = categories && transaction.category_id 
+  const categoryName = categories && transaction.category_id
     ? getCategoryFullPath(categories.find(c => c.id === transaction.category_id)!, categories)
     : 'Sin categoría';
 
@@ -31,7 +31,7 @@ function TransactionDetailModal({ transaction, onClose, onReport, categories }: 
     <div className="fixed inset-0 z-50 overflow-y-auto" onClick={onClose}>
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="fixed inset-0 bg-black bg-opacity-75 transition-opacity"></div>
-        <div 
+        <div
           className="relative transform overflow-hidden rounded-lg bg-gray-800 text-left shadow-xl transition-all sm:w-full sm:max-w-lg"
           onClick={e => e.stopPropagation()}
         >
@@ -54,11 +54,10 @@ function TransactionDetailModal({ transaction, onClose, onReport, categories }: 
                   </p>
                 </div>
                 <div>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                    transaction.reported 
-                      ? 'bg-green-900/30 text-green-400' 
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${transaction.reported
+                      ? 'bg-green-900/30 text-green-400'
                       : 'bg-yellow-900/30 text-yellow-400'
-                  }`}>
+                    }`}>
                     {transaction.reported ? 'Reportada' : 'Pendiente'}
                   </span>
                 </div>
@@ -193,9 +192,8 @@ export function TransactionList({ transactions, onReportClick, categories }: Tra
               onClick={() => handleRowClick(transaction)}
             >
               <div className="flex items-center justify-between">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  getTransactionTypeColor(transaction.transaction_type)
-                }`}>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTransactionTypeColor(transaction.transaction_type)
+                  }`}>
                   <Icon className="h-4 w-4 mr-1" />
                   {transaction.transaction_type}
                 </span>
@@ -203,7 +201,7 @@ export function TransactionList({ transactions, onReportClick, categories }: Tra
                   {format(new Date(transaction.transaction_date), 'HH:mm', { locale: es })}
                 </span>
               </div>
-              
+
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm text-gray-200">{transaction.description}</p>
@@ -262,8 +260,8 @@ export function TransactionList({ transactions, onReportClick, categories }: Tra
               {paginatedTransactions.map(transaction => {
                 const Icon = getTransactionIcon(transaction.transaction_type);
                 return (
-                  <tr 
-                    key={transaction.id} 
+                  <tr
+                    key={transaction.id}
                     className="hover:bg-gray-700 cursor-pointer transition-colors"
                     onClick={() => handleRowClick(transaction)}
                   >
@@ -281,9 +279,8 @@ export function TransactionList({ transactions, onReportClick, categories }: Tra
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        getTransactionTypeColor(transaction.transaction_type)
-                      }`}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTransactionTypeColor(transaction.transaction_type)
+                        }`}>
                         <Icon className="h-4 w-4 mr-1" />
                         {transaction.transaction_type}
                       </span>
@@ -372,11 +369,10 @@ export function TransactionList({ transactions, onReportClick, categories }: Tra
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`relative inline-flex items-center px-4 py-2 border border-gray-700 text-sm font-medium ${
-                      page === currentPage
+                    className={`relative inline-flex items-center px-4 py-2 border border-gray-700 text-sm font-medium ${page === currentPage
                         ? 'bg-gray-700 text-white'
                         : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                    }`}
+                      }`}
                   >
                     {page}
                   </button>
@@ -405,15 +401,21 @@ export function TransactionList({ transactions, onReportClick, categories }: Tra
         categories={categories}
       />
 
-      <TransactionDetailModal
-        transaction={selectedTransaction}
-        onClose={() => {
-          setSelectedTransaction(null);
-          setIsDetailModalOpen(false);
-        }}
-        onReport={!selectedTransaction?.reported ? () => handleReportClick(selectedTransaction) : undefined}
-        categories={categories}
-      />
+      {isDetailModalOpen && (
+        <TransactionDetailModal
+          transaction={selectedTransaction}
+          onClose={() => {
+            setSelectedTransaction(null);
+            setIsDetailModalOpen(false);
+          }}
+          onReport={
+            !selectedTransaction?.reported
+              ? () => handleReportClick(selectedTransaction)
+              : undefined
+          }
+          categories={categories}
+        />
+      )}
     </>
   );
 }
