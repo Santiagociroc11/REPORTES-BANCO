@@ -11,6 +11,14 @@ RUN npm install --frozen-lockfile
 # Copia el resto del código fuente
 COPY . .
 
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ARG TELEGRAM_BOT_TOKEN
+
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+ENV TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
+
 # Construir la aplicación Vite con las variables de entorno
 RUN npm run build
 
