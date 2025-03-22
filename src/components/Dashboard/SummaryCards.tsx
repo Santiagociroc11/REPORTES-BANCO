@@ -33,7 +33,7 @@ export function SummaryCards({ transactions }: SummaryCardsProps) {
               <CreditCard className="h-4 w-4 text-blue-400" />
             </div>
             <div>
-              <p className="text-xs font-medium text-gray-400">Total</p>
+              <p className="text-xs font-medium text-gray-400">Total gastos</p>
               <p className="text-lg font-bold text-white">
                 ${totalAmount.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </p>

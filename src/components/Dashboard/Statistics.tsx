@@ -175,10 +175,10 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
       period === 'month'
         ? totalGastos / 30
         : period === 'week'
-        ? totalGastos / 7
-        : period === 'custom'
-        ? totalGastos / dates.length
-        : totalGastos / (new Date().getHours() + 1);
+          ? totalGastos / 7
+          : period === 'custom'
+            ? totalGastos / dates.length
+            : totalGastos / (new Date().getHours() + 1);
 
     const netBalance = totalIngresos - totalGastos;
 
@@ -238,7 +238,60 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
   return (
     <div className="space-y-6">
       {/* Resumen General */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+      <div className="flex space-x-2 mt-2 md:mt-0">
+        <button
+          onClick={() => onPeriodChange('day')}
+          className={`px-3 py-1 rounded-md text-xs md:text-sm font-medium ${period === 'day' ? 'bg-blue-900 text-blue-100' : 'text-gray-300 hover:bg-gray-700'
+            }`}
+        >
+          Diario (Hoy)
+        </button>
+        <button
+          onClick={() => onPeriodChange('week')}
+          className={`px-3 py-1 rounded-md text-xs md:text-sm font-medium ${period === 'week' ? 'bg-blue-900 text-blue-100' : 'text-gray-300 hover:bg-gray-700'
+            }`}
+        >
+          Últimos 7 días
+        </button>
+        <button
+          onClick={() => onPeriodChange('month')}
+          className={`px-3 py-1 rounded-md text-xs md:text-sm font-medium ${period === 'month' ? 'bg-blue-900 text-blue-100' : 'text-gray-300 hover:bg-gray-700'
+            }`}
+        >
+          Últimos 30 días
+        </button>
+        <button
+          onClick={() => onPeriodChange('custom')}
+          className={`px-3 py-1 rounded-md text-xs md:text-sm font-medium ${period === 'custom' ? 'bg-blue-900 text-blue-100' : 'text-gray-300 hover:bg-gray-700'
+            }`}
+        >
+          Personalizado
+        </button>
+      </div>
+      {period === 'custom' && (
+        <div className="flex flex-col md:flex-row md:space-x-4 mb-4">
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Desde</label>
+            <input
+              type="date"
+              value={customRange.start}
+              onChange={(e) => setCustomRange({ ...customRange, start: e.target.value })}
+              className="px-2 py-1 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Hasta</label>
+            <input
+              type="date"
+              value={customRange.end}
+              onChange={(e) => setCustomRange({ ...customRange, end: e.target.value })}
+              className="px-2 py-1 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 my-4">
         <div className="bg-gray-800 rounded-xl p-4 md:p-6 border border-gray-700">
           <div className="flex items-center justify-between">
             <div>
@@ -304,63 +357,9 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
             <TrendingUp className="h-5 w-5 md:h-6 md:w-6 mr-2" />
             Evolución Temporal
           </h2>
-          <div className="flex space-x-2 mt-2 md:mt-0">
-            <button
-              onClick={() => onPeriodChange('day')}
-              className={`px-3 py-1 rounded-md text-xs md:text-sm font-medium ${
-                period === 'day' ? 'bg-blue-900 text-blue-100' : 'text-gray-300 hover:bg-gray-700'
-              }`}
-            >
-              Diario
-            </button>
-            <button
-              onClick={() => onPeriodChange('week')}
-              className={`px-3 py-1 rounded-md text-xs md:text-sm font-medium ${
-                period === 'week' ? 'bg-blue-900 text-blue-100' : 'text-gray-300 hover:bg-gray-700'
-              }`}
-            >
-              Semanal
-            </button>
-            <button
-              onClick={() => onPeriodChange('month')}
-              className={`px-3 py-1 rounded-md text-xs md:text-sm font-medium ${
-                period === 'month' ? 'bg-blue-900 text-blue-100' : 'text-gray-300 hover:bg-gray-700'
-              }`}
-            >
-              Mensual
-            </button>
-            <button
-              onClick={() => onPeriodChange('custom')}
-              className={`px-3 py-1 rounded-md text-xs md:text-sm font-medium ${
-                period === 'custom' ? 'bg-blue-900 text-blue-100' : 'text-gray-300 hover:bg-gray-700'
-              }`}
-            >
-              Personalizado
-            </button>
-          </div>
+
         </div>
-        {period === 'custom' && (
-          <div className="flex flex-col md:flex-row md:space-x-4 mb-4">
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Desde</label>
-              <input
-                type="date"
-                value={customRange.start}
-                onChange={(e) => setCustomRange({ ...customRange, start: e.target.value })}
-                className="px-2 py-1 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Hasta</label>
-              <input
-                type="date"
-                value={customRange.end}
-                onChange={(e) => setCustomRange({ ...customRange, end: e.target.value })}
-                className="px-2 py-1 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-        )}
+
         <div className="h-64 md:h-80">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={stats.timelineData}>
