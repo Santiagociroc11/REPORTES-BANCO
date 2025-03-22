@@ -87,7 +87,9 @@ export function UserSettings({
           transactions={transactions}
           startDate={dateRange.start}
           endDate={dateRange.end}
+          categories={categories}
         />
+
       </div>
     </div>
   );

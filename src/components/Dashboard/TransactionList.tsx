@@ -48,7 +48,7 @@ function TransactionDetailModal({ transaction, onClose, onReport, categories }: 
           <div>
             <p className="text-xs">Fecha</p>
             <p className="text-base font-medium">{format(new Date(transaction.transaction_date), 'PPP', { locale: es })}</p>
-            <p className="text-xs">{format(new Date(transaction.transaction_date), 'HH:mm', { locale: es })}</p>
+            <p className="text-xs">{format(new Date(transaction.transaction_date), 'hh:mm a', { locale: es })}</p>
           </div>
           <div>
             <p className="text-xs">Banco</p>
@@ -75,6 +75,12 @@ function TransactionDetailModal({ transaction, onClose, onReport, categories }: 
             <p className="text-xs">Descripción</p>
             <p className="text-base">{transaction.description}</p>
           </div>
+          {transaction.comment && (
+            <div className="mt-4 p-3 bg-gray-800 border border-gray-700 rounded">
+              <p className="text-xs text-gray-400 mb-1">Comentario</p>
+              <p className="text-sm text-gray-300">{transaction.comment}</p>
+            </div>
+          )}
           {transaction.reported && (
             <div>
               <p className="text-xs">Categoría</p>
@@ -112,7 +118,7 @@ export function TransactionList({ transactions, onReportClick, categories, showD
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
   const [filtersVisible, setFiltersVisible] = useState(false);
-  // Valor predefinido: "todo"
+  // Valor predefinido: "todo" es el filtro inicial
   const [activePredefined, setActivePredefined] = useState<null | 'todo' | 'today' | 'yesterday' | 'lastWeek' | 'thisMonth'>('todo');
 
   // Filtros predefinidos de tiempo
@@ -279,7 +285,6 @@ export function TransactionList({ transactions, onReportClick, categories, showD
                 Este Mes
               </button>
             </div>
-
             <button
               onClick={() => setFiltersVisible(!filtersVisible)}
               className="px-3 py-1 text-xs rounded border border-gray-500 text-gray-500 hover:bg-gray-500 hover:text-white transition-colors"
@@ -342,7 +347,7 @@ export function TransactionList({ transactions, onReportClick, categories, showD
                         <Icon className="h-4 w-4 mr-1" /> {transaction.transaction_type}
                       </span>
                       <span className="text-xs text-gray-400">
-                        {format(new Date(transaction.transaction_date), 'HH:mm', { locale: es })}
+                        {format(new Date(transaction.transaction_date), 'hh:mm a', { locale: es })}
                       </span>
                     </div>
                     <div className="flex justify-between items-center mt-2">
@@ -395,7 +400,7 @@ export function TransactionList({ transactions, onReportClick, categories, showD
                               {format(new Date(transaction.transaction_date), 'PPP', { locale: es })}
                             </span>
                             <span className="text-xs text-gray-400">
-                              {format(new Date(transaction.transaction_date), 'HH:mm', { locale: es })}
+                              {format(new Date(transaction.transaction_date), 'hh:mm a', { locale: es })}
                             </span>
                           </div>
                         </div>
