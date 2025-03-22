@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { X, Calendar, Clock, CreditCard, FileText, Tag as TagIcon, FolderTree } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -15,19 +15,19 @@ interface ReportTransactionModalProps {
   categories: CustomCategory[];
 }
 
-export function ReportTransactionModal({
-  isOpen,
-  onClose,
-  transaction,
-  onSuccess,
-  tags,
-  categories
-}: ReportTransactionModalProps) {
+export function ReportTransactionModal({ isOpen, onClose, transaction, onSuccess, tags, categories }: ReportTransactionModalProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Reinicia los campos cuando la transacción cambie
+  useEffect(() => {
+    setSelectedCategory('');
+    setSelectedTags([]);
+    setComment('');
+  }, [transaction]);
 
   const categoryHierarchy = useMemo(() => buildCategoryHierarchy(categories), [categories]);
 
