@@ -11,6 +11,7 @@ import { AddTransactionButton } from '../components/Dashboard/AddTransactionButt
 import { TransactionList } from '../components/Dashboard/TransactionList';
 import { UserSettings } from '../components/Dashboard/Views/UserSettings';
 import { supabase } from '../lib/supabase';
+import { toast } from 'react-toastify';
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
@@ -24,16 +25,14 @@ export default function Dashboard() {
   const [showTelegramConfig, setShowTelegramConfig] = useState(false);
   const [showEmailConfig, setShowEmailConfig] = useState(false);
 
-  // Memoize fetchCategories to prevent unnecessary re-renders
+  // Función para cargar categorías
   const fetchCategories = useCallback(async () => {
     if (!user) return;
-
     try {
       const { data, error } = await supabase
         .from('categories')
         .select('*')
         .eq('user_id', user.id);
-
       if (error) throw error;
       setCategories(data || []);
     } catch (error) {
@@ -41,10 +40,9 @@ export default function Dashboard() {
     }
   }, [user]);
 
-  // Memoize fetchTransactions to prevent unnecessary re-renders
+  // Función para cargar transacciones
   const fetchTransactions = useCallback(async () => {
     if (!user) return;
-
     try {
       const { data, error } = await supabase
         .from('transactions')
@@ -58,7 +56,6 @@ export default function Dashboard() {
         `)
         .eq('user_id', user.id)
         .order('transaction_date', { ascending: false });
-
       if (error) throw error;
       setTransactions(data || []);
     } catch (error) {
@@ -66,7 +63,23 @@ export default function Dashboard() {
     }
   }, [user]);
 
-  // Initial data fetch
+  // Función para eliminar una transacción (ya no se usa confirmación, pues se hace en el modal)
+  const handleTransactionDelete = useCallback(async (transaction: Transaction) => {
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', transaction.id);
+      if (error) throw error;
+      await fetchTransactions();
+      toast.success("Transacción eliminada exitosamente");
+    } catch (error) {
+      console.error("Error eliminando la transacción:", error);
+      toast.error("Error eliminando la transacción");
+    }
+  }, [fetchTransactions]);
+
+  // Fetch inicial de datos
   useEffect(() => {
     if (user) {
       const fetchData = async () => {
@@ -78,22 +91,18 @@ export default function Dashboard() {
     }
   }, [user, fetchTransactions, fetchCategories]);
 
-  // Memoize handleCategoriesChange to prevent unnecessary re-renders
   const handleCategoriesChange = useCallback(async () => {
     await fetchCategories();
   }, [fetchCategories]);
 
-  // Handle transaction report
   const handleTransactionReport = useCallback(async () => {
     await fetchTransactions();
   }, [fetchTransactions]);
 
-  // Memoize filtered transactions
   const filteredTransactions = useMemo(() => {
     return showPending ? transactions.filter(t => !t.reported) : transactions;
   }, [transactions, showPending]);
 
-  // Memoize content renderer
   const renderContent = useCallback(() => {
     if (loading) {
       return (
@@ -122,6 +131,7 @@ export default function Dashboard() {
             <TransactionList
               transactions={filteredTransactions}
               onReportClick={handleTransactionReport}
+              onDeleteClick={handleTransactionDelete}
               categories={categories}
             />
           </div>

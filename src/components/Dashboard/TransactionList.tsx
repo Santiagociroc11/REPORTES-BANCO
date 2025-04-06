@@ -18,6 +18,7 @@ import { getCategoryFullPath } from '../../utils/categories';
 interface TransactionListProps {
   transactions: Transaction[];
   onReportClick: (transaction: Transaction) => void;
+  onDeleteClick: (transaction: Transaction) => void;
   categories?: CustomCategory[];
   showDateFilter?: boolean;
 }
@@ -26,87 +27,161 @@ interface TransactionDetailModalProps {
   transaction: Transaction | null;
   onClose: () => void;
   onReport?: () => void;
+  onDelete?: () => void;
   categories?: CustomCategory[];
 }
 
-function TransactionDetailModal({ transaction, onClose, onReport, categories }: TransactionDetailModalProps) {
+function TransactionDetailModal({ transaction, onClose, onReport, onDelete, categories }: TransactionDetailModalProps) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   if (!transaction) return null;
+
   const categoryName = categories && transaction.category_id
     ? getCategoryFullPath(categories.find(c => c.id === transaction.category_id)!, categories)
     : 'Sin categoría';
 
+  // Muestra el modal de confirmación
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  // Cancela la eliminación
+  const handleCancelDelete = () => {
+    setShowDeleteConfirm(false);
+  };
+
+  // Confirma la eliminación y llama el callback onDelete
+  const handleConfirmDelete = () => {
+    onDelete && onDelete();
+    setShowDeleteConfirm(false);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-70" onClick={onClose}>
-      <div
-        className="relative bg-gray-900 rounded-md w-full max-w-lg p-6"
-        onClick={e => e.stopPropagation()}
-      >
-        <button onClick={onClose} className="absolute top-3 right-3 text-gray-500 hover:text-gray-300">
-          <X className="h-5 w-5" />
-        </button>
-        <div className="space-y-3 text-gray-100">
-          <div>
-            <p className="text-xs">Fecha</p>
-            <p className="text-base font-medium">{format(new Date(transaction.transaction_date), 'PPP', { locale: es })}</p>
-            <p className="text-xs">{format(new Date(transaction.transaction_date), 'hh:mm a', { locale: es })}</p>
-          </div>
-          <div>
-            <p className="text-xs">Banco</p>
-            <p className="text-base">{transaction.banco}</p>
-          </div>
-          <div>
-            <p className="text-xs">Monto</p>
-            <p className="text-2xl font-bold">${Number(transaction.amount).toLocaleString('es-CO')}</p>
-          </div>
-          <div>
-            <p className="text-xs">Tipo</p>
-            <div className="mt-1">
-              {(() => {
-                const Icon = getTransactionIcon(transaction.transaction_type);
-                return (
-                  <span className={`inline-flex items-center text-xs font-medium ${getTransactionTypeColor(transaction.transaction_type)}`}>
-                    <Icon className="h-4 w-4 mr-1" /> {transaction.transaction_type}
-                  </span>
-                );
-              })()}
-            </div>
-          </div>
-          <div>
-            <p className="text-xs">Descripción</p>
-            <p className="text-base">{transaction.description}</p>
-          </div>
-          {transaction.comment && (
-            <div className="mt-4 p-3 bg-gray-800 border border-gray-700 rounded">
-              <p className="text-xs text-gray-400 mb-1">Comentario</p>
-              <p className="text-sm text-gray-300">{transaction.comment}</p>
-            </div>
-          )}
-          {transaction.reported && (
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-70" onClick={onClose}>
+        <div
+          className="relative bg-gray-900 rounded-md w-full max-w-lg p-6"
+          onClick={e => e.stopPropagation()}
+        >
+          <button onClick={onClose} className="absolute top-3 right-3 text-gray-500 hover:text-gray-300">
+            <X className="h-5 w-5" />
+          </button>
+          <div className="space-y-3 text-gray-100">
+            {/* Información de la transacción */}
             <div>
-              <p className="text-xs">Categoría</p>
-              <div className="flex items-center text-blue-400">
-                <FolderTree className="h-4 w-4 mr-1" />
-                <span className="text-xs">{categoryName}</span>
+              <p className="text-xs">Fecha</p>
+              <p className="text-base font-medium">
+                {format(new Date(transaction.transaction_date), 'PPP', { locale: es })}
+              </p>
+              <p className="text-xs">
+                {format(new Date(transaction.transaction_date), 'hh:mm a', { locale: es })}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs">Banco</p>
+              <p className="text-base">{transaction.banco}</p>
+            </div>
+            <div>
+              <p className="text-xs">Monto</p>
+              <p className="text-2xl font-bold">
+                ${Number(transaction.amount).toLocaleString('es-CO')}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs">Tipo</p>
+              <div className="mt-1">
+                {(() => {
+                  const Icon = getTransactionIcon(transaction.transaction_type);
+                  return (
+                    <span className={`inline-flex items-center text-xs font-medium ${getTransactionTypeColor(transaction.transaction_type)}`}>
+                      <Icon className="h-4 w-4 mr-1" /> {transaction.transaction_type}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
-          )}
-          {!transaction.reported && onReport && (
+            <div>
+              <p className="text-xs">Descripción</p>
+              <p className="text-base">{transaction.description}</p>
+            </div>
+            {transaction.comment && (
+              <div className="mt-4 p-3 bg-gray-800 border border-gray-700 rounded">
+                <p className="text-xs text-gray-400 mb-1">Comentario</p>
+                <p className="text-sm text-gray-300">{transaction.comment}</p>
+              </div>
+            )}
+            {transaction.reported && (
+              <div>
+                <p className="text-xs">Categoría</p>
+                <div className="flex items-center text-blue-400">
+                  <FolderTree className="h-4 w-4 mr-1" />
+                  <span className="text-xs">{categoryName}</span>
+                </div>
+              </div>
+            )}
+            {!transaction.reported && onReport && (
+              <div className="pt-4">
+                <button
+                  onClick={onReport}
+                  className="w-full py-2 rounded bg-blue-500 hover:bg-blue-600 text-white text-sm transition-colors"
+                >
+                  Reportar Transacción
+                </button>
+              </div>
+            )}
+            {/* Botón para iniciar eliminación */}
             <div className="pt-4">
               <button
-                onClick={onReport}
-                className="w-full py-2 rounded bg-blue-500 hover:bg-blue-600 text-white text-sm transition-colors"
+                onClick={handleDeleteClick}
+                className="w-full py-2 rounded bg-red-500 hover:bg-red-600 text-white text-sm transition-colors"
               >
-                Reportar Transacción
+                Eliminar Transacción
               </button>
             </div>
-          )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Modal de confirmación para eliminar */}
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black bg-opacity-70"
+          onClick={handleCancelDelete}
+        >
+          <div
+            className="relative bg-gray-900 rounded-md w-full max-w-sm p-6"
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-medium text-white">Confirmar Eliminación</h3>
+            <p className="mt-2 text-gray-300">¿Está seguro que desea eliminar esta transacción?</p>
+            <div className="mt-4 flex justify-end space-x-2">
+              <button
+                onClick={handleCancelDelete}
+                className="px-4 py-2 rounded bg-gray-600 text-white hover:bg-gray-500"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
-export function TransactionList({ transactions, onReportClick, categories, showDateFilter = true }: TransactionListProps) {
+export function TransactionList({
+  transactions,
+  onReportClick,
+  onDeleteClick,
+  categories,
+  showDateFilter = true
+}: TransactionListProps) {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -118,7 +193,6 @@ export function TransactionList({ transactions, onReportClick, categories, showD
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
   const [filtersVisible, setFiltersVisible] = useState(false);
-  // Valor predefinido: "todo" es el filtro inicial
   const [activePredefined, setActivePredefined] = useState<null | 'todo' | 'today' | 'yesterday' | 'lastWeek' | 'thisMonth'>('todo');
 
   // Filtros predefinidos de tiempo
@@ -158,7 +232,6 @@ export function TransactionList({ transactions, onReportClick, categories, showD
           break;
       }
     }
-    // Al aplicar un filtro predefinido, ocultamos el panel de filtros
     setFiltersVisible(false);
   };
 
@@ -198,7 +271,6 @@ export function TransactionList({ transactions, onReportClick, categories, showD
     });
   }, [transactions, searchTerm, sortKey, sortDirection, filterStartDate, filterEndDate, showDateFilter, activePredefined]);
 
-  // Agrupar transacciones por día
   const groupedTransactions = useMemo(() => {
     const groups: { [key: string]: Transaction[] } = {};
     filteredSortedTransactions.forEach(t => {
@@ -471,6 +543,13 @@ export function TransactionList({ transactions, onReportClick, categories, showD
             setIsDetailModalOpen(false);
           }}
           onReport={!selectedTransaction?.reported ? () => handleReportClick(selectedTransaction) : undefined}
+          onDelete={() => {
+            if (selectedTransaction) {
+              onDeleteClick(selectedTransaction);
+              setSelectedTransaction(null);
+              setIsDetailModalOpen(false);
+            }
+          }}
           categories={categories}
         />
       )}
