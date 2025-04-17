@@ -79,6 +79,12 @@ export default function Dashboard() {
     }
   }, [fetchTransactions]);
 
+  // Función para manejar la edición de una transacción
+  const handleTransactionEdit = useCallback(async () => {
+    await fetchTransactions();
+    toast.success("Transacción actualizada exitosamente");
+  }, [fetchTransactions]);
+
   // Fetch inicial de datos
   useEffect(() => {
     if (user) {
@@ -132,6 +138,7 @@ export default function Dashboard() {
               transactions={filteredTransactions}
               onReportClick={handleTransactionReport}
               onDeleteClick={handleTransactionDelete}
+              onEditClick={handleTransactionEdit}
               categories={categories}
             />
           </div>
@@ -165,7 +172,9 @@ export default function Dashboard() {
     categories,
     statsPeriod,
     handleCategoriesChange,
-    handleTransactionReport
+    handleTransactionReport,
+    handleTransactionDelete,
+    handleTransactionEdit
   ]);
 
   return (

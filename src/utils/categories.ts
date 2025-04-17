@@ -26,13 +26,15 @@ export function buildCategoryHierarchy(categories: CustomCategory[]): CustomCate
 }
 
 export function getCategoryFullPath(category: CustomCategory, categories: CustomCategory[]): string {
+  if (!category || !category.name) return 'Sin categoría';
+  
   const parts: string[] = [category.name];
   let currentId = category.parent_id;
 
   while (currentId) {
     const parent = categories.find(c => c.id === currentId);
     if (parent) {
-      parts.unshift(parent.name);
+      parts.unshift(parent.name || 'Categoría');
       currentId = parent.parent_id;
     } else {
       break;

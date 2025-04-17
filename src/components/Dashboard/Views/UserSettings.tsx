@@ -61,10 +61,16 @@ export function UserSettings({
             <input
               type="date"
               value={format(dateRange.start, 'yyyy-MM-dd')}
-              onChange={(e) => setDateRange(prev => ({
-                ...prev,
-                start: new Date(e.target.value)
-              }))}
+              onChange={(e) => {
+                const dateStr = e.target.value;
+                // Create date with time set to noon to avoid timezone issues
+                const [year, month, day] = dateStr.split('-').map(Number);
+                const date = new Date(year, month - 1, day, 12, 0, 0);
+                setDateRange(prev => ({
+                  ...prev,
+                  start: date
+                }));
+              }}
               className="block w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-white focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
@@ -75,10 +81,16 @@ export function UserSettings({
             <input
               type="date"
               value={format(dateRange.end, 'yyyy-MM-dd')}
-              onChange={(e) => setDateRange(prev => ({
-                ...prev,
-                end: new Date(e.target.value)
-              }))}
+              onChange={(e) => {
+                const dateStr = e.target.value;
+                // Create date with time set to noon to avoid timezone issues
+                const [year, month, day] = dateStr.split('-').map(Number);
+                const date = new Date(year, month - 1, day, 12, 0, 0);
+                setDateRange(prev => ({
+                  ...prev,
+                  end: date
+                }));
+              }}
               className="block w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-white focus:border-blue-500 focus:ring-blue-500"
             />
           </div>

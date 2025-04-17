@@ -5,6 +5,7 @@ export interface Transaction {
   transaction_date: string;
   reported: boolean;
   category: string | null;
+  category_id?: string | null;
   comment: string | null;
   transaction_type: 'compra con tarjeta' | 'pago por pse' | 'transferencia' | 'pago programado' | 'gasto manual';
   type: 'ingreso' | 'gasto';

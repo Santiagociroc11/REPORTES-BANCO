@@ -1,46 +1,41 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { X, Calendar, CreditCard, FileText, FolderTree } from 'lucide-react';
-import { format } from 'date-fns';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, FolderTree } from 'lucide-react';
 import { es } from 'date-fns/locale';
-import { Transaction, Tag, CustomCategory } from '../../types';
+import { Transaction, CustomCategory } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { buildCategoryHierarchy } from '../../utils/categories';
 import { NewCategoryModal } from './NewCategoryModal';
 
-interface ReportTransactionModalProps {
+interface RecategorizeTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   transaction: Transaction | null;
   onSuccess: () => void;
-  tags?: Tag[];
   categories: CustomCategory[];
   refreshCategories?: () => void;
 }
 
-export function ReportTransactionModal({
+export function RecategorizeTransactionModal({
   isOpen,
   onClose,
   transaction,
   onSuccess,
-  tags,
   categories,
   refreshCategories,
-}: ReportTransactionModalProps) {
+}: RecategorizeTransactionModalProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  // Estado para controlar el modal de nueva categoría
   const [showNewCategoryModal, setShowNewCategoryModal] = useState(false);
 
-  // Reiniciar campos cuando cambia la transacción
+  // Reiniciar campos al cambiar la transacción
   useEffect(() => {
-    setSelectedCategory('');
-    setSelectedTags([]);
-    setComment('');
-    setShowNewCategoryModal(false);
+    if (transaction) {
+      setSelectedCategory(transaction.category_id ? String(transaction.category_id) : '');
+      setComment(transaction.comment || '');
+      setShowNewCategoryModal(false);
+    }
   }, [transaction]);
 
   const categoryHierarchy = useMemo(() => buildCategoryHierarchy(categories), [categories]);
@@ -62,69 +57,42 @@ export function ReportTransactionModal({
     setLoading(true);
 
     try {
-      // Actualizar la transacción
+      // Actualizar la transacción con la nueva categoría y comentario.
+      // Como la transacción ya está reportada, no es necesario cambiar el campo "reported"
       const { error: updateError } = await supabase
         .from('transactions')
         .update({
           category_id: selectedCategory || null,
           comment,
-          reported: true
         })
         .eq('id', transaction.id);
 
       if (updateError) throw updateError;
 
-      // Actualizar las etiquetas (si las hay)
-      if (selectedTags.length > 0) {
-        const tagRelations = selectedTags.map(tagId => ({
-          transaction_id: transaction.id,
-          tag_id: tagId
-        }));
-
-        // Primero eliminar las etiquetas existentes
-        await supabase
-          .from('transaction_tags')
-          .delete()
-          .eq('transaction_id', transaction.id);
-
-        // Luego insertar las nuevas
-        const { error: tagError } = await supabase
-          .from('transaction_tags')
-          .insert(tagRelations);
-
-        if (tagError) throw tagError;
-      }
-
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Error al actualizar la transacción:', error);
-      setError('Error al actualizar la transacción');
+      console.error('Error al recategorizar la transacción:', error);
+      setError('Error al recategorizar la transacción');
     } finally {
       setLoading(false);
     }
   }
 
-  const transactionDate = new Date(transaction.transaction_date);
-
-  // Callback cuando se crea una nueva categoría
   const handleCategoryCreated = (newCategory: CustomCategory) => {
-    // Si dispones de un callback para refrescar la lista, lo ejecutas
     if (refreshCategories) refreshCategories();
-    // Seleccionamos la categoría creada
     setSelectedCategory(newCategory.id);
   };
 
   return (
     <>
-      <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        <div className="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
+      <div className="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+        <div className="flex min-h-screen items-center justify-center p-4">
           <div 
             className="fixed inset-0 bg-gray-900/75 backdrop-blur-sm transition-opacity" 
             aria-hidden="true"
             onClick={onClose}
           />
-
           <div className="relative transform overflow-hidden rounded-2xl bg-gradient-to-b from-gray-800 to-gray-900 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
             <div className="absolute right-0 top-0 hidden pr-4 pt-4 sm:block">
               <button
@@ -135,60 +103,17 @@ export function ReportTransactionModal({
                 <X className="h-5 w-5" />
               </button>
             </div>
-
             <div className="px-4 pb-4 pt-5 sm:p-6">
               <div className="sm:flex sm:items-start">
                 <div className="mt-3 w-full text-center sm:mt-0 sm:text-left">
-                  <h3 className="text-2xl font-semibold leading-6 text-white mb-8" id="modal-title">
-                    Reportar Transacción
+                  <h3 className="text-2xl font-semibold leading-6 text-white mb-8">
+                    Recategorizar Transacción
                   </h3>
-
-                  <div className="mb-8 grid grid-cols-1 gap-4 rounded-xl border border-gray-700 bg-gray-800/50 p-4 shadow-inner">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-500/20">
-                        <Calendar className="h-6 w-6 text-blue-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-400">Fecha y Hora</p>
-                        <p className="text-lg font-semibold text-white">
-                          {format(transactionDate, 'PPP', { locale: es })}
-                          <span className="ml-2 text-sm text-gray-400">
-                            {format(transactionDate, 'hh:mm a', { locale: es })}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-green-500/20">
-                        <CreditCard className="h-6 w-6 text-green-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-400">Monto</p>
-                        <p className="text-lg font-semibold text-white">
-                          ${Number(transaction.amount).toLocaleString('es-CO', { minimumFractionDigits: 2 })}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/20">
-                        <FileText className="h-6 w-6 text-purple-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-400">Descripción</p>
-                        <p className="text-lg font-semibold text-white">
-                          {transaction.description}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
                   <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
                       <label htmlFor="category" className="block text-sm font-medium text-gray-300 mb-1">
                         <FolderTree className="h-4 w-4 inline mr-1" />
-                        Categoría
+                        Nueva Categoría
                       </label>
                       <select
                         id="category"
@@ -221,8 +146,7 @@ export function ReportTransactionModal({
                         onChange={(e) => setComment(e.target.value)}
                         rows={3}
                         className="block w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        required
-                        placeholder="Añade detalles sobre esta transacción"
+                        placeholder="Puedes agregar un comentario adicional"
                       />
                     </div>
 
@@ -259,8 +183,6 @@ export function ReportTransactionModal({
           </div>
         </div>
       </div>
-      
-      {/* Modal de nueva categoría */}
       <NewCategoryModal 
         isOpen={showNewCategoryModal} 
         onClose={() => setShowNewCategoryModal(false)}
