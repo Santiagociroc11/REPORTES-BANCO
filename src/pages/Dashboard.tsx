@@ -140,6 +140,7 @@ export default function Dashboard() {
               onDeleteClick={handleTransactionDelete}
               onEditClick={handleTransactionEdit}
               categories={categories}
+              showDateFilter={!showPending}
             />
           </div>
         );
