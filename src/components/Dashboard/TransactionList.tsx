@@ -26,6 +26,7 @@ interface TransactionListProps {
   onEditClick?: (transaction: Transaction) => void;
   categories?: CustomCategory[];
   showDateFilter?: boolean;
+  refreshCategories?: () => void;
 }
 
 interface TransactionDetailModalProps {
@@ -197,7 +198,8 @@ export function TransactionList({
   onDeleteClick,
   onEditClick,
   categories,
-  showDateFilter = true
+  showDateFilter = true,
+  refreshCategories,
 }: TransactionListProps) {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -727,6 +729,7 @@ export function TransactionList({
           handleModalClose();
         }}
         categories={categories}
+        refreshCategories={refreshCategories}
       />
 
       {/* Modal de Edición */}

@@ -141,6 +141,7 @@ export default function Dashboard() {
               onEditClick={handleTransactionEdit}
               categories={categories}
               showDateFilter={!showPending}
+              refreshCategories={fetchCategories}
             />
           </div>
         );
