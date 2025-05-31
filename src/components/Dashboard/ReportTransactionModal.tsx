@@ -58,6 +58,8 @@ export function ReportTransactionModal({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!transaction) return;
+    
     setError('');
     setLoading(true);
 
@@ -76,7 +78,7 @@ export function ReportTransactionModal({
 
       // Actualizar las etiquetas (si las hay)
       if (selectedTags.length > 0) {
-        const tagRelations = selectedTags.map(tagId => ({
+        const tagRelations = selectedTags.map((tagId: string) => ({
           transaction_id: transaction.id,
           tag_id: tagId
         }));
@@ -193,7 +195,7 @@ export function ReportTransactionModal({
                       <select
                         id="category"
                         value={selectedCategory}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedCategory(e.target.value)}
                         className="block w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-white focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                         required
                       >
@@ -218,7 +220,7 @@ export function ReportTransactionModal({
                       <textarea
                         id="comment"
                         value={comment}
-                        onChange={(e) => setComment(e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setComment(e.target.value)}
                         rows={3}
                         className="block w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                         required

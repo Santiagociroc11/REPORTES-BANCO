@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { CustomCategory } from '../../types';
 import { buildCategoryHierarchy } from '../../utils/categories';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface NewCategoryModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface NewCategoryModalProps {
 }
 
 export function NewCategoryModal({ isOpen, onClose, onCategoryCreated, categories }: NewCategoryModalProps) {
+  const { user } = useAuth();
   const [newCategoryName, setNewCategoryName] = useState('');
   const [parentCategory, setParentCategory] = useState('');
   const [error, setError] = useState('');
@@ -36,6 +38,10 @@ export function NewCategoryModal({ isOpen, onClose, onCategoryCreated, categorie
       setError('El nombre es requerido');
       return;
     }
+    if (!user) {
+      setError('Usuario no autenticado');
+      return;
+    }
     setError('');
     setLoading(true);
     try {
@@ -44,7 +50,9 @@ export function NewCategoryModal({ isOpen, onClose, onCategoryCreated, categorie
         .insert({
           name: newCategoryName.trim(),
           parent_id: parentCategory || null,
+          user_id: user.id,
         })
+        .select()
         .single();
       if (insertError) throw insertError;
       onCategoryCreated(data);
