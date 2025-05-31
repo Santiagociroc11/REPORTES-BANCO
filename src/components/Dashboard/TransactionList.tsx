@@ -313,7 +313,14 @@ export function TransactionList({
     // Agrupación normal por fecha cuando el ordenamiento es por fecha
     const groups: { [key: string]: Transaction[] } = {};
     filteredSortedTransactions.forEach(t => {
-      const key = format(new Date(t.transaction_date), 'yyyy-MM-dd');
+      // Crear la fecha sin problemas de zona horaria
+      const transactionDate = new Date(t.transaction_date);
+      // Usar la fecha local para la agrupación
+      const year = transactionDate.getFullYear();
+      const month = String(transactionDate.getMonth() + 1).padStart(2, '0');
+      const day = String(transactionDate.getDate()).padStart(2, '0');
+      const key = `${year}-${month}-${day}`;
+      
       if (!groups[key]) groups[key] = [];
       groups[key].push(t);
     });
@@ -563,7 +570,7 @@ export function TransactionList({
           <div key={group.date}>
             {group.date !== 'all' ? (
               <h3 className="px-3 py-1 bg-gray-800 text-gray-100 font-medium rounded">
-                {format(new Date(group.date), 'PPP', { locale: es })}
+                {format(new Date(group.date + 'T12:00:00'), 'PPP', { locale: es })}
               </h3>
             ) : (
               <h3 className="px-3 py-1 bg-gray-800 text-gray-100 font-medium rounded">
@@ -629,7 +636,7 @@ export function TransactionList({
           <div key={group.date}>
             {group.date !== 'all' ? (
               <div className="bg-gray-700 text-gray-100 px-6 py-3 font-medium">
-                {format(new Date(group.date), 'PPP', { locale: es })}
+                {format(new Date(group.date + 'T12:00:00'), 'PPP', { locale: es })}
               </div>
             ) : (
               <div className="bg-gray-700 text-gray-100 px-6 py-3 font-medium">
