@@ -10,6 +10,7 @@ import {
   Edit,
   CreditCard,
   FileText,
+  Split,
 } from 'lucide-react';
 import { format, subDays, startOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -18,6 +19,7 @@ import { getTransactionIcon, getTransactionTypeColor } from '../../utils/transac
 import { ReportTransactionModal } from './ReportTransactionModal';
 import { getCategoryFullPath, buildCategoryHierarchy } from '../../utils/categories';
 import { EditTransactionModal } from './EditTransactionModal';
+import { SplitTransactionModal } from './SplitTransactionModal';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -35,10 +37,11 @@ interface TransactionDetailModalProps {
   onReport?: () => void;
   onDelete?: () => void;
   onEdit?: () => void;
+  onSplit?: () => void;
   categories?: CustomCategory[];
 }
 
-function TransactionDetailModal({ transaction, onClose, onReport, onDelete, onEdit, categories }: TransactionDetailModalProps) {
+function TransactionDetailModal({ transaction, onClose, onReport, onDelete, onEdit, onSplit, categories }: TransactionDetailModalProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   if (!transaction) return null;
@@ -146,6 +149,17 @@ function TransactionDetailModal({ transaction, onClose, onReport, onDelete, onEd
                 </button>
               </div>
             )}
+            {/* Botón para dividir transacción */}
+            {onSplit && (
+              <div className="pt-4">
+                <button
+                  onClick={onSplit}
+                  className="w-full py-2 rounded bg-purple-500 hover:bg-purple-600 text-white text-sm transition-colors"
+                >
+                  <Split className="h-4 w-4 mr-1 inline" /> Dividir Transacción
+                </button>
+              </div>
+            )}
             {/* Botón para iniciar eliminación */}
             <div className="pt-4">
               <button
@@ -203,8 +217,9 @@ export function TransactionList({
 }: TransactionListProps) {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isSplitModalOpen, setIsSplitModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // Estados para filtros y ordenamiento
   const [searchTerm, setSearchTerm] = useState('');
@@ -370,6 +385,17 @@ export function TransactionList({
   const handleEditModalClose = () => {
     setSelectedTransaction(null);
     setIsEditModalOpen(false);
+  };
+
+  const handleSplitClick = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setIsSplitModalOpen(true);
+    setIsDetailModalOpen(false);
+  };
+
+  const handleSplitModalClose = () => {
+    setSelectedTransaction(null);
+    setIsSplitModalOpen(false);
   };
 
   const renderNestedCategories = (categories: CustomCategory[]) => {
@@ -753,6 +779,21 @@ export function TransactionList({
         categories={categories || []}
       />
 
+      {/* Modal de División */}
+      <SplitTransactionModal
+        isOpen={isSplitModalOpen}
+        onClose={handleSplitModalClose}
+        transaction={selectedTransaction}
+        onSuccess={() => {
+          if (onEditClick && selectedTransaction) {
+            onEditClick(selectedTransaction);
+          }
+          handleSplitModalClose();
+        }}
+        categories={categories || []}
+        refreshCategories={refreshCategories}
+      />
+
       {isDetailModalOpen && (
         <TransactionDetailModal
           transaction={selectedTransaction}
@@ -767,6 +808,11 @@ export function TransactionList({
               onDeleteClick(selectedTransaction);
               setSelectedTransaction(null);
               setIsDetailModalOpen(false);
+            }
+          }}
+          onSplit={() => {
+            if (selectedTransaction) {
+              handleSplitClick(selectedTransaction);
             }
           }}
           categories={categories}
