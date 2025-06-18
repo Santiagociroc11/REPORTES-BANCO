@@ -21,7 +21,7 @@ export default function Dashboard() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentView, setCurrentView] = useState<'transactions' | 'stats' | 'user'>('transactions');
   const [showPending, setShowPending] = useState(true);
-  const [statsPeriod, setStatsPeriod] = useState<'day' | 'week' | 'month'>('month');
+  const [statsPeriod, setStatsPeriod] = useState<'day' | 'week' | 'month' | 'quarter'>('month');
   const [showTelegramConfig, setShowTelegramConfig] = useState(false);
   const [showEmailConfig, setShowEmailConfig] = useState(false);
 

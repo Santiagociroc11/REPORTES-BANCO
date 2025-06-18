@@ -36,7 +36,7 @@ import {
 import { es } from 'date-fns/locale';
 import { buildCategoryHierarchy, getCategoryFullPath } from '../../utils/categories';
 
-type PeriodOption = 'day' | 'week' | 'month' | 'custom';
+type PeriodOption = 'day' | 'week' | 'month' | 'quarter' | 'custom';
 
 interface StatisticsProps {
   transactions: Transaction[];
@@ -101,8 +101,14 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
     // Timeline adaptable según el período
     let dates: Date[] = [];
     if (period === 'month') {
-      // Mostrar los últimos 6 meses en lugar de 12
-      dates = eachMonthOfInterval({ start: subDays(new Date(), 180), end: new Date() });
+      // Mostrar cada día del mes actual
+      const now = new Date();
+      const startOfCurrentMonth = startOfMonth(now);
+      const endOfCurrentMonth = endOfMonth(now);
+      dates = eachDayOfInterval({ start: startOfCurrentMonth, end: endOfCurrentMonth });
+    } else if (period === 'quarter') {
+      // Mostrar los últimos 3 meses
+      dates = eachMonthOfInterval({ start: subDays(new Date(), 90), end: new Date() });
     } else if (period === 'week') {
       dates = eachDayOfInterval({ start: subDays(new Date(), 6), end: new Date() });
     } else if (period === 'day') {
@@ -119,6 +125,22 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
       let gastos = 0;
       let ingresos = 0;
       if (period === 'month') {
+        // Para el mes actual, mostrar día por día
+        const periodTransactions = relevantTransactions.filter((t) => isSameDay(new Date(t.transaction_date), date));
+        gastos = periodTransactions
+          .filter((t) => t.type === 'gasto')
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+        ingresos = periodTransactions
+          .filter((t) => t.type === 'ingreso')
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+        return {
+          date: format(date, 'dd', { locale: es }),
+          gastos,
+          ingresos,
+          fullDate: format(date, 'EEEE, dd MMMM yyyy', { locale: es }),
+        };
+      } else if (period === 'quarter') {
+        // Para trimestre, mostrar mes por mes
         const periodTransactions = relevantTransactions.filter((t) => {
           const tDate = new Date(t.transaction_date);
           return tDate >= startOfMonth(date) && tDate <= endOfMonth(date);
@@ -181,12 +203,14 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
 
     const promedioDiario =
       period === 'month'
-        ? totalGastos / 30
+        ? totalGastos / new Date().getDate() // Dividir por los días transcurridos del mes
         : period === 'week'
           ? totalGastos / 7
-          : period === 'custom'
-            ? totalGastos / dates.length
-            : totalGastos / (new Date().getHours() + 1);
+          : period === 'quarter'
+            ? totalGastos / 90
+            : period === 'custom'
+              ? totalGastos / dates.length
+              : totalGastos / (new Date().getHours() + 1);
 
     const netBalance = totalIngresos - totalGastos;
 
@@ -486,6 +510,13 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
           Últimos 30 días
         </button>
         <button
+          onClick={() => onPeriodChange('quarter')}
+          className={`px-3 py-1 rounded-md text-xs md:text-sm font-medium ${period === 'quarter' ? 'bg-blue-900 text-blue-100' : 'text-gray-300 hover:bg-gray-700'
+            }`}
+        >
+          Trimestre
+        </button>
+        <button
           onClick={() => onPeriodChange('custom')}
           className={`px-3 py-1 rounded-md text-xs md:text-sm font-medium ${period === 'custom' ? 'bg-blue-900 text-blue-100' : 'text-gray-300 hover:bg-gray-700'
             }`}
@@ -641,11 +672,11 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
                   boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
                 }}
                 labelStyle={{ color: '#F3F4F6', fontWeight: 'bold', marginBottom: '5px', fontSize: '13px' }}
-                formatter={(value: number, name) => {
+                formatter={(value: number, name: any) => {
                   const formattedName = name === 'gastos' ? 'Gastos' : 'Ingresos';
                   return [`$${value.toLocaleString('es-CO')}`, formattedName];
                 }}
-                labelFormatter={(label, payload) => {
+                labelFormatter={(label: any, payload: any) => {
                   const item = payload && payload[0] ? payload[0].payload : null;
                   return item && item.fullDate ? item.fullDate : label;
                 }}
@@ -694,7 +725,8 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
         <div className="mt-2 text-center text-xs text-gray-400">
           {period === 'day' && "Mostrando datos del día de hoy por hora"}
           {period === 'week' && "Mostrando datos de los últimos 7 días"}
-          {period === 'month' && "Mostrando datos de los últimos 30 días por mes"}
+          {period === 'month' && "Mostrando datos del mes actual día por día"}
+          {period === 'quarter' && "Mostrando datos de los últimos 3 meses"}
           {period === 'custom' && "Mostrando datos del período personalizado seleccionado"}
         </div>
       </div>
