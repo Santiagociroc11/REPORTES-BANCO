@@ -226,7 +226,7 @@ export default function Dashboard() {
         onClose={() => setShowEmailConfig(false)}
       />
 
-      <AddTransactionButton />
+      <AddTransactionButton onTransactionAdded={fetchTransactions} />
     </div>
   );
 }
