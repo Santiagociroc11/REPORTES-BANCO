@@ -1,11 +1,11 @@
 import React from 'react';
-import { X, User, Wallet, LogOut } from 'lucide-react';
+import { X, User, Wallet, LogOut, BarChart3 } from 'lucide-react';
 
 interface MobileMenuProps {
   isOpen: boolean;
   onClose: () => void;
-  currentView: 'transactions' | 'stats' | 'user';
-  setCurrentView: (view: 'transactions' | 'stats' | 'user') => void;
+  currentView: 'transactions' | 'stats' | 'table' | 'user';
+  setCurrentView: (view: 'transactions' | 'stats' | 'table' | 'user') => void;
   onLogout: () => void;
 }
 
@@ -52,6 +52,18 @@ export function MobileMenu({
             }`}
           >
             Estadísticas
+          </button>
+          <button
+            onClick={() => {
+              setCurrentView('table');
+              onClose();
+            }}
+            className={`w-full text-left px-4 py-2 mb-2 text-gray-300 hover:bg-gray-700 rounded-md flex items-center ${
+              currentView === 'table' ? 'bg-blue-900 text-blue-100' : ''
+            }`}
+          >
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Tabla Total
           </button>
           <button
             onClick={() => {

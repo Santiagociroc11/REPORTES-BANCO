@@ -10,6 +10,7 @@ import { EmailConfig } from '../components/EmailConfig';
 import { AddTransactionButton } from '../components/Dashboard/AddTransactionButton';
 import { TransactionList } from '../components/Dashboard/TransactionList';
 import { UserSettings } from '../components/Dashboard/Views/UserSettings';
+import { TotalTable } from '../components/Dashboard/Views/TotalTable';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-toastify';
 
@@ -19,7 +20,7 @@ export default function Dashboard() {
   const [categories, setCategories] = useState<CustomCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<'transactions' | 'stats' | 'user'>('transactions');
+  const [currentView, setCurrentView] = useState<'transactions' | 'stats' | 'table' | 'user'>('transactions');
   const [showPending, setShowPending] = useState(true);
   const [statsPeriod, setStatsPeriod] = useState<'day' | 'week' | 'month' | 'quarter'>('month');
   const [showTelegramConfig, setShowTelegramConfig] = useState(false);
@@ -150,7 +151,18 @@ export default function Dashboard() {
           <Statistics
             transactions={transactions}
             period={statsPeriod}
-            onPeriodChange={setStatsPeriod}
+            onPeriodChange={(period) => {
+              if (period !== 'custom') {
+                setStatsPeriod(period);
+              }
+            }}
+            categories={categories}
+          />
+        );
+      case 'table':
+        return (
+          <TotalTable
+            transactions={transactions}
             categories={categories}
           />
         );
@@ -186,6 +198,8 @@ export default function Dashboard() {
         setIsMenuOpen={setIsMenuOpen}
         currentView={currentView}
         setCurrentView={setCurrentView}
+        setShowEmailConfig={setShowEmailConfig}
+        setShowTelegramConfig={setShowTelegramConfig}
         onLogout={signOut}
       />
 

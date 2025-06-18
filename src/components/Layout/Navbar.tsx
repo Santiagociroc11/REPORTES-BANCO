@@ -1,11 +1,11 @@
 import React from 'react';
-import { Wallet, Menu, X, User, LogOut } from 'lucide-react';
+import { Wallet, Menu, X, User, LogOut, BarChart3 } from 'lucide-react';
 
 interface NavbarProps {
   isMenuOpen: boolean;
   setIsMenuOpen: (isOpen: boolean) => void;
-  currentView: 'transactions' | 'stats' | 'user';
-  setCurrentView: (view: 'transactions' | 'stats' | 'user') => void;
+  currentView: 'transactions' | 'stats' | 'table' | 'user';
+  setCurrentView: (view: 'transactions' | 'stats' | 'table' | 'user') => void;
   setShowEmailConfig: (show: boolean) => void;
   setShowTelegramConfig: (show: boolean) => void;
   onLogout: () => void;
@@ -52,6 +52,15 @@ export function Navbar({
               }`}
             >
               Estadísticas
+            </button>
+            <button
+              onClick={() => setCurrentView('table')}
+              className={`px-4 py-2 rounded-md text-sm font-medium ${
+                currentView === 'table' ? 'bg-blue-900 text-blue-100' : 'text-gray-300 hover:bg-gray-700'
+              } flex items-center`}
+            >
+              <BarChart3 className="h-4 w-4 mr-1" />
+              Tabla Total
             </button>
             <button
               onClick={() => setCurrentView('user')}
