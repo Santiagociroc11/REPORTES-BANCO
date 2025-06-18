@@ -2,10 +2,24 @@ import React, { useMemo, useState } from 'react';
 import {
   BarChart2,
   TrendingUp,
+  TrendingDown,
   PieChart,
   Calendar,
   ArrowUpRight,
   ArrowDownRight,
+  AlertTriangle,
+  CheckCircle,
+  Minus,
+  Target,
+  Zap,
+  Brain,
+  Clock,
+  Activity,
+  Shield,
+  Star,
+  Eye,
+  Lightbulb,
+  Gauge,
 } from 'lucide-react';
 import {
   BarChart,
@@ -447,6 +461,89 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
     
     const periodComparison = calculatePeriodComparison();
 
+    // Calcular tendencias por categoría (mes actual vs anterior)
+    const calculateCategoryTrends = () => {
+      const now = new Date();
+      const currentMonthStart = startOfMonth(now);
+      const currentMonthEnd = endOfMonth(now);
+      
+      // Mes anterior
+      const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const previousMonthStart = startOfMonth(previousMonth);
+      const previousMonthEnd = endOfMonth(previousMonth);
+      
+      // Transacciones del mes actual
+      const currentMonthTransactions = transactions.filter(t => {
+        const tDate = new Date(t.transaction_date);
+        return tDate >= currentMonthStart && tDate <= currentMonthEnd && t.type === 'gasto';
+      });
+      
+      // Transacciones del mes anterior
+      const previousMonthTransactions = transactions.filter(t => {
+        const tDate = new Date(t.transaction_date);
+        return tDate >= previousMonthStart && tDate <= previousMonthEnd && t.type === 'gasto';
+      });
+      
+      // Calcular totales por categoría para ambos meses
+      const currentMonthByCategory = currentMonthTransactions.reduce((acc, t) => {
+        const categoryName = getCategoryName(t);
+        acc[categoryName] = (acc[categoryName] || 0) + Number(t.amount);
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const previousMonthByCategory = previousMonthTransactions.reduce((acc, t) => {
+        const categoryName = getCategoryName(t);
+        acc[categoryName] = (acc[categoryName] || 0) + Number(t.amount);
+        return acc;
+      }, {} as Record<string, number>);
+      
+      // Obtener todas las categorías únicas
+      const allCategories = new Set([
+        ...Object.keys(currentMonthByCategory),
+        ...Object.keys(previousMonthByCategory)
+      ]);
+      
+      // Calcular tendencias
+      const trends = Array.from(allCategories).map(category => {
+        const currentAmount = currentMonthByCategory[category] || 0;
+        const previousAmount = previousMonthByCategory[category] || 0;
+        
+        let changePercent = 0;
+        let changeType: 'increase' | 'decrease' | 'new' | 'stable' = 'stable';
+        
+        if (previousAmount === 0 && currentAmount > 0) {
+          changeType = 'new';
+          changePercent = 100;
+        } else if (previousAmount > 0 && currentAmount === 0) {
+          changeType = 'decrease';
+          changePercent = -100;
+        } else if (previousAmount > 0) {
+          changePercent = ((currentAmount - previousAmount) / previousAmount) * 100;
+          if (Math.abs(changePercent) < 5) {
+            changeType = 'stable';
+          } else if (changePercent > 0) {
+            changeType = 'increase';
+          } else {
+            changeType = 'decrease';
+          }
+        }
+        
+        return {
+          category,
+          currentAmount,
+          previousAmount,
+          changePercent,
+          changeType,
+          absoluteChange: currentAmount - previousAmount
+        };
+      }).filter(trend => trend.currentAmount > 0 || trend.previousAmount > 0)
+        .sort((a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent));
+      
+      return trends;
+    };
+
+    const categoryTrends = calculateCategoryTrends();
+
     return {
       categoryTotals: Object.entries(categoryTotals)
         .filter(([name]) => name && name !== 'undefined')
@@ -481,7 +578,8 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
       pieBankData,
       trends,
       recurrentPatterns,
-      periodComparison
+      periodComparison,
+      categoryTrends
     };
   }, [transactions, period, categories, customRange]);
 
@@ -1247,6 +1345,104 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
           </div>
         </div>
       )}
+
+      {/* Análisis de Tendencias por Categoría */}
+      <div className="bg-gray-800 rounded-xl p-4 md:p-6 border border-gray-700">
+        <h2 className="text-lg md:text-xl font-semibold text-white flex items-center mb-4">
+          <TrendingUp className="h-5 w-5 md:h-6 md:w-6 mr-2" />
+          Tendencias por Categoría (vs Mes Anterior)
+        </h2>
+        
+        {stats.categoryTrends.length > 0 ? (
+          <div className="space-y-3">
+            {stats.categoryTrends.slice(0, 8).map((trend, index) => {
+              const getTrendIcon = () => {
+                switch (trend.changeType) {
+                  case 'increase':
+                    return <ArrowUpRight className="h-4 w-4 text-red-400" />;
+                  case 'decrease':
+                    return <ArrowDownRight className="h-4 w-4 text-green-400" />;
+                  case 'new':
+                    return <AlertTriangle className="h-4 w-4 text-yellow-400" />;
+                  case 'stable':
+                    return <Minus className="h-4 w-4 text-gray-400" />;
+                  default:
+                    return <Minus className="h-4 w-4 text-gray-400" />;
+                }
+              };
+
+              const getTrendColor = () => {
+                switch (trend.changeType) {
+                  case 'increase':
+                    return 'text-red-400 bg-red-900/20 border-red-800';
+                  case 'decrease':
+                    return 'text-green-400 bg-green-900/20 border-green-800';
+                  case 'new':
+                    return 'text-yellow-400 bg-yellow-900/20 border-yellow-800';
+                  case 'stable':
+                    return 'text-gray-400 bg-gray-900/20 border-gray-800';
+                  default:
+                    return 'text-gray-400 bg-gray-900/20 border-gray-800';
+                }
+              };
+
+              const getTrendMessage = () => {
+                switch (trend.changeType) {
+                  case 'increase':
+                    return `+${Math.abs(trend.changePercent).toFixed(1)}% más que el mes anterior`;
+                  case 'decrease':
+                    return `${Math.abs(trend.changePercent).toFixed(1)}% menos que el mes anterior`;
+                  case 'new':
+                    return 'Nueva categoría este mes';
+                  case 'stable':
+                    return 'Sin cambios significativos';
+                  default:
+                    return '';
+                }
+              };
+
+              return (
+                <div
+                  key={index}
+                  className={`flex items-center justify-between p-3 rounded-lg border ${getTrendColor()}`}
+                >
+                  <div className="flex items-center space-x-3">
+                    {getTrendIcon()}
+                    <div>
+                      <h3 className="font-medium text-white text-sm">
+                        {trend.category}
+                      </h3>
+                      <p className="text-xs text-gray-400">
+                        {getTrendMessage()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-white">
+                      ${trend.currentAmount.toLocaleString('es-CO')}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      vs ${trend.previousAmount.toLocaleString('es-CO')}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            
+            {stats.categoryTrends.length > 8 && (
+              <div className="text-center text-xs text-gray-400 mt-3">
+                Mostrando las 8 categorías con mayor cambio de {stats.categoryTrends.length} totales
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-center text-gray-400 py-8">
+            <TrendingDown className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p>No hay datos suficientes para mostrar tendencias</p>
+            <p className="text-xs mt-1">Se necesitan transacciones de al menos 2 meses</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
