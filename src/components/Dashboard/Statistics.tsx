@@ -101,7 +101,8 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
     // Timeline adaptable según el período
     let dates: Date[] = [];
     if (period === 'month') {
-      dates = eachMonthOfInterval({ start: subDays(new Date(), 365), end: new Date() });
+      // Mostrar los últimos 6 meses en lugar de 12
+      dates = eachMonthOfInterval({ start: subDays(new Date(), 180), end: new Date() });
     } else if (period === 'week') {
       dates = eachDayOfInterval({ start: subDays(new Date(), 6), end: new Date() });
     } else if (period === 'day') {
