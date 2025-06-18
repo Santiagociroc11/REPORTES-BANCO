@@ -8,7 +8,8 @@ import {
   ArrowDownRight,
   Calendar,
   BarChart3,
-  Filter
+  Filter,
+  AlertTriangle
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -91,11 +92,12 @@ export function TotalTable({ transactions, categories }: TotalTableProps) {
           const previousAmount = categoryMonthData[categoryName][previousMonth.key] || 0;
           
           let changePercent = 0;
-          if (previousAmount > 0) {
+          // Solo calcular cambio si el mes anterior tuvo gastos
+          if (previousAmount > 0 && amount > 0) {
             changePercent = ((amount - previousAmount) / previousAmount) * 100;
-          } else if (amount > 0) {
-            changePercent = 100; // Nueva categoría
           }
+          // Si el mes anterior era 0 y ahora hay gastos, no mostrar indicador
+          // (será tratado como nueva categoría en ese período)
           
           row[`${month.key}_change`] = changePercent;
         }
@@ -104,7 +106,28 @@ export function TotalTable({ transactions, categories }: TotalTableProps) {
       return row;
     }).filter(row => row.total > 0); // Solo mostrar categorías con gastos
 
-    return { tableData, months };
+    // Detectar cambios significativos para alertas
+    const significantChanges = tableData.flatMap(row => {
+      return months.slice(1).map((month, index) => {
+        const changePercent = row[`${month.key}_change`] || 0;
+        const amount = row[month.key] || 0;
+        
+        if (Math.abs(changePercent) >= 25 && amount > 0) {
+          return {
+            category: row.category,
+            month: month.label,
+            changePercent,
+            amount,
+            isIncrease: changePercent > 0
+          };
+        }
+        return null;
+      }).filter(Boolean);
+    }).filter(Boolean)
+    .sort((a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent))
+    .slice(0, 10); // Top 10 cambios más significativos
+
+    return { tableData, months, significantChanges };
   }, [transactions, categories, period]);
 
   const sortedData = useMemo(() => {
@@ -148,13 +171,50 @@ export function TotalTable({ transactions, categories }: TotalTableProps) {
     if (Math.abs(changePercent) < 1) return null;
     
     const isPositive = changePercent > 0;
-    const color = isPositive ? 'text-red-400' : 'text-green-400';
-    const Icon = isPositive ? ArrowUpRight : ArrowDownRight;
+    const absPercent = Math.abs(changePercent);
+    
+    // Determinar la intensidad del cambio para colores y estilos
+    let color, bgColor, Icon, intensity;
+    
+    if (isPositive) {
+      // Aumentos - Rojo con intensidad
+      if (absPercent >= 50) {
+        color = 'text-red-100';
+        bgColor = 'bg-red-600';
+        intensity = '🔥'; // Aumento muy alto
+      } else if (absPercent >= 25) {
+        color = 'text-red-200';
+        bgColor = 'bg-red-500/80';
+        intensity = '⚠️'; // Aumento alto
+      } else {
+        color = 'text-red-400';
+        bgColor = 'bg-red-900/30';
+        intensity = '';
+      }
+      Icon = ArrowUpRight;
+    } else {
+      // Reducciones - Verde con intensidad
+      if (absPercent >= 50) {
+        color = 'text-green-100';
+        bgColor = 'bg-green-600';
+        intensity = '✨'; // Reducción excelente
+      } else if (absPercent >= 25) {
+        color = 'text-green-200';
+        bgColor = 'bg-green-500/80';
+        intensity = '👍'; // Reducción buena
+      } else {
+        color = 'text-green-400';
+        bgColor = 'bg-green-900/30';
+        intensity = '';
+      }
+      Icon = ArrowDownRight;
+    }
     
     return (
-      <div className={`flex items-center text-xs ${color} mt-1`}>
+      <div className={`flex items-center justify-center text-xs ${color} ${bgColor} mt-1 px-2 py-1 rounded-full border ${isPositive ? 'border-red-600/50' : 'border-green-600/50'}`}>
         <Icon className="h-3 w-3 mr-1" />
-        {Math.abs(changePercent).toFixed(1)}%
+        <span className="font-medium">{absPercent.toFixed(1)}%</span>
+        {intensity && <span className="ml-1">{intensity}</span>}
       </div>
     );
   };
@@ -267,6 +327,74 @@ export function TotalTable({ transactions, categories }: TotalTableProps) {
           </div>
         )}
       </div>
+
+      {/* Alertas de Cambios Significativos */}
+      {data.significantChanges.length > 0 && (
+        <div className="bg-gradient-to-br from-orange-900/20 to-red-900/20 rounded-xl p-4 md:p-6 border border-orange-800/30">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+            <AlertTriangle className="h-5 w-5 mr-2 text-orange-400" />
+            Cambios Significativos Detectados
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {data.significantChanges.map((change, index) => (
+              <div 
+                key={index}
+                className={`p-3 rounded-lg border ${
+                  change.isIncrease 
+                    ? 'bg-red-900/20 border-red-800/30' 
+                    : 'bg-green-900/20 border-green-800/30'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h4 className="font-medium text-white text-sm">
+                      {change.category}
+                    </h4>
+                    <p className="text-xs text-gray-400">
+                      {change.month}
+                    </p>
+                  </div>
+                  <div className="text-right ml-3">
+                    <div className={`text-sm font-bold ${
+                      change.isIncrease ? 'text-red-400' : 'text-green-400'
+                    }`}>
+                      {change.isIncrease ? '+' : ''}{change.changePercent.toFixed(1)}%
+                    </div>
+                    <div className="text-xs text-gray-300">
+                      ${change.amount.toLocaleString('es-CO')}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-2 flex items-center text-xs">
+                  {change.isIncrease ? (
+                    <>
+                      <ArrowUpRight className="h-3 w-3 text-red-400 mr-1" />
+                      <span className="text-red-400">
+                        {change.changePercent >= 50 ? 'Aumento crítico' : 'Aumento importante'}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowDownRight className="h-3 w-3 text-green-400 mr-1" />
+                      <span className="text-green-400">
+                        {change.changePercent <= -50 ? 'Reducción excelente' : 'Reducción notable'}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="mt-4 p-3 bg-blue-900/20 border border-blue-800/30 rounded-lg text-xs text-gray-300">
+            <p>
+              <span className="font-semibold">💡 Tip:</span> Los cambios de +25% o más se consideran significativos. 
+              Revisa estas categorías para entender mejor tus patrones de gasto.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Resumen */}
       {sortedData.length > 0 && (
