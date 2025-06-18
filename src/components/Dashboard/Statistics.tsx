@@ -61,6 +61,8 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
     const startDate =
       period === 'custom'
         ? new Date(customRange.start)
+        : period === 'month'
+        ? startOfMonth(new Date()) // Para mes, desde el inicio del mes actual
         : getStartDate(period);
     // Para el filtrado en custom se usa también la fecha final
     const endDate = period === 'custom' ? new Date(customRange.end) : new Date();
@@ -203,7 +205,7 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
 
     const promedioDiario =
       period === 'month'
-        ? totalGastos / new Date().getDate() // Dividir por los días transcurridos del mes
+        ? totalGastos / new Date().getDate() // Dividir por los días transcurridos del mes actual
         : period === 'week'
           ? totalGastos / 7
           : period === 'quarter'
@@ -507,7 +509,7 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
           className={`px-3 py-1 rounded-md text-xs md:text-sm font-medium ${period === 'month' ? 'bg-blue-900 text-blue-100' : 'text-gray-300 hover:bg-gray-700'
             }`}
         >
-          Últimos 30 días
+          Este mes
         </button>
         <button
           onClick={() => onPeriodChange('quarter')}
@@ -673,8 +675,8 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
                 }}
                 labelStyle={{ color: '#F3F4F6', fontWeight: 'bold', marginBottom: '5px', fontSize: '13px' }}
                 formatter={(value: number, name: any) => {
-                  const formattedName = name === 'gastos' ? 'Gastos' : 'Ingresos';
-                  return [`$${value.toLocaleString('es-CO')}`, formattedName];
+                  // name viene como 'Gastos' o 'Ingresos' desde el componente Line
+                  return [`$${value.toLocaleString('es-CO')}`, name];
                 }}
                 labelFormatter={(label: any, payload: any) => {
                   const item = payload && payload[0] ? payload[0].payload : null;
