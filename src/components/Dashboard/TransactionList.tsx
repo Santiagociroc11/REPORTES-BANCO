@@ -11,6 +11,7 @@ import {
   CreditCard,
   FileText,
   Split,
+  MessageSquare,
 } from 'lucide-react';
 import { format, subDays, startOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -276,7 +277,8 @@ export function TransactionList({
       const matchesSearch =
         t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (t.banco && t.banco.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        t.transaction_type.toLowerCase().includes(searchTerm.toLowerCase());
+        t.transaction_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (t.comment && t.comment.toLowerCase().includes(searchTerm.toLowerCase()));
       
       let matchesDate = true;
       if (showDateFilter && activePredefined !== 'todo') {
@@ -484,7 +486,7 @@ export function TransactionList({
                     <label className="block text-xs font-medium text-gray-300 mb-1">Buscar</label>
                     <input
                       type="text"
-                      placeholder="Buscar por descripción, banco..."
+                      placeholder="Buscar por descripción, banco, comentario..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full px-3 py-2 bg-gray-700 text-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-600"
@@ -624,7 +626,17 @@ export function TransactionList({
                       </span>
                     </div>
                     <div className="flex justify-between items-center mt-2">
-                      <p className="text-sm text-gray-100">{transaction.description}</p>
+                      <div className="flex-1 mr-4">
+                        <p className="text-sm text-gray-100">{transaction.description}</p>
+                        {transaction.comment && (
+                          <div className="flex items-start gap-1 mt-1">
+                            <MessageSquare className="h-3 w-3 text-gray-500 mt-0.5 flex-shrink-0" />
+                            <p className="text-xs text-gray-400 italic">
+                              {transaction.comment}
+                            </p>
+                          </div>
+                        )}
+                      </div>
                       <p className="text-base font-semibold text-gray-100">
                         ${Number(transaction.amount).toLocaleString('es-CO')}
                       </p>
@@ -709,15 +721,25 @@ export function TransactionList({
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-sm text-gray-100">{transaction.description}</span>
-                        {transaction.reported && transaction.category_id && categories && (
-                          <div className="flex items-center mt-1">
-                            <FolderTree className="h-3 w-3 text-blue-400 mr-1" />
-                            <span className="text-xs text-blue-400">
-                              {getCategoryFullPath(categories.find(c => c.id === transaction.category_id)!, categories)}
-                            </span>
-                          </div>
-                        )}
+                        <div>
+                          <span className="text-sm text-gray-100">{transaction.description}</span>
+                          {transaction.comment && (
+                            <div className="flex items-start gap-1 mt-1">
+                              <MessageSquare className="h-3 w-3 text-gray-500 mt-0.5 flex-shrink-0" />
+                              <div className="text-xs text-gray-400 italic">
+                                {transaction.comment}
+                              </div>
+                            </div>
+                          )}
+                          {transaction.reported && transaction.category_id && categories && (
+                            <div className="flex items-center mt-1">
+                              <FolderTree className="h-3 w-3 text-blue-400 mr-1" />
+                              <span className="text-xs text-blue-400">
+                                {getCategoryFullPath(categories.find(c => c.id === transaction.category_id)!, categories)}
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {transaction.reported ? (
