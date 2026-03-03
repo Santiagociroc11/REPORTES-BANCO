@@ -21,6 +21,11 @@ if (!MONGODB_URI.includes('/reportes-banco')) {
 }
 const PORT = process.env.PORT || 3000;
 
+console.log('[Server] Iniciando...');
+console.log('[Server] Puerto:', PORT);
+console.log('[Server] MongoDB:', MONGODB_URI.replace(/:[^:@]+@/, ':****@') || 'no configurado');
+console.log('[Server] Conectando a MongoDB...');
+
 const app = express();
 
 app.use(cors());
@@ -43,12 +48,13 @@ app.get('*', (_, res) => {
 
 mongoose.connect(MONGODB_URI)
   .then(() => {
-    console.log('Conectado a MongoDB');
+    console.log('[Server] ✓ Conectado a MongoDB');
     app.listen(PORT, () => {
-      console.log(`Servidor en http://localhost:${PORT}`);
+      console.log('[Server] ✓ Servidor listo en http://localhost:' + PORT);
+      console.log('[Server] API: /api/auth, /api/transactions, /api/categories, etc.');
     });
   })
   .catch((err) => {
-    console.error('Error conectando a MongoDB:', err);
+    console.error('[Server] ✗ Error conectando a MongoDB:', err.message);
     process.exit(1);
   });
