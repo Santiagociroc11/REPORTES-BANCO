@@ -166,6 +166,7 @@ export default function Dashboard() {
           <TotalTable
             transactions={transactions}
             categories={categories}
+            onRefresh={fetchTransactions}
           />
         );
       case 'user':

@@ -15,19 +15,22 @@ import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Transaction, CustomCategory } from '../../../types';
 import { getCategoryFullPath } from '../../../utils/categories';
+import { CellTransactionsModal } from './CellTransactionsModal';
 
 interface TotalTableProps {
   transactions: Transaction[];
   categories: CustomCategory[];
+  onRefresh?: () => void;
 }
 
 type PeriodOption = '3months' | '6months' | '12months';
 type SortDirection = 'asc' | 'desc';
 
-export function TotalTable({ transactions, categories }: TotalTableProps) {
+export function TotalTable({ transactions, categories, onRefresh }: TotalTableProps) {
   const [period, setPeriod] = useState<PeriodOption>('6months');
   const [sortColumn, setSortColumn] = useState<string>('category');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [selectedCell, setSelectedCell] = useState<{ categoryName: string; monthKey: string; monthLabel: string; amount: number } | null>(null);
 
   const data = useMemo(() => {
     const now = new Date();
@@ -152,6 +155,22 @@ export function TotalTable({ transactions, categories }: TotalTableProps) {
       totalSinFacebookAds: Object.values(monthTotalsSinFacebookAds).reduce((a, b) => a + b, 0)
     };
   }, [transactions, categories, period]);
+
+  const getCategoryName = (t: Transaction) => {
+    if (!t.category_id) return 'Sin categoría';
+    const cat = categories.find((c) => c.id === t.category_id);
+    return cat ? getCategoryFullPath(cat, categories) : 'Sin categoría';
+  };
+
+  const cellTransactions = useMemo(() => {
+    if (!selectedCell) return [];
+    const expenseTransactions = transactions.filter((t) => t.type === 'gasto');
+    return expenseTransactions.filter((t) => {
+      const catName = getCategoryName(t);
+      const monthKey = format(new Date(t.transaction_date), 'yyyy-MM');
+      return catName === selectedCell.categoryName && monthKey === selectedCell.monthKey;
+    });
+  }, [selectedCell, transactions, categories]);
 
   const sortedData = useMemo(() => {
     return [...data.tableData].sort((a, b) => {
@@ -364,9 +383,15 @@ export function TotalTable({ transactions, categories }: TotalTableProps) {
                   {data.months.map((month, monthIndex) => {
                     const amount = row[month.key] || 0;
                     const changePercent = row[`${month.key}_change`] || 0;
+                    const isClickable = amount > 0;
                     
                     return (
-                      <td key={month.key} className="px-4 py-3 text-center">
+                      <td
+                        key={month.key}
+                        className={`px-4 py-3 text-center ${isClickable ? 'cursor-pointer hover:bg-gray-600/50 transition-colors' : ''}`}
+                        onClick={isClickable ? () => setSelectedCell({ categoryName: row.category, monthKey: month.key, monthLabel: month.label, amount }) : undefined}
+                        title={isClickable ? 'Ver transacciones' : undefined}
+                      >
                         <div className="text-sm text-white font-medium">
                           {amount > 0 ? `$${amount.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}` : '-'}
                         </div>
@@ -498,6 +523,17 @@ export function TotalTable({ transactions, categories }: TotalTableProps) {
           </div>
         </div>
       )}
+
+      <CellTransactionsModal
+        isOpen={!!selectedCell}
+        onClose={() => setSelectedCell(null)}
+        transactions={cellTransactions}
+        categoryName={selectedCell?.categoryName ?? ''}
+        monthLabel={selectedCell?.monthLabel ?? ''}
+        totalAmount={selectedCell?.amount ?? 0}
+        categories={categories}
+        onRefresh={onRefresh}
+      />
     </div>
   );
 } 
