@@ -73,7 +73,11 @@ router.get('/search-history', async (req, res) => {
     const transactions = await Transaction.find({
       user_id,
       reported: true,
-      $or: [{ description: re }, { category_id: { $in: matchingCatIds } }]
+      $or: [
+        { description: re },
+        { comment: re },
+        { category_id: { $in: matchingCatIds } }
+      ]
     })
       .sort({ transaction_date: -1 })
       .limit(20)

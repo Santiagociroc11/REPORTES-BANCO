@@ -5,11 +5,20 @@ import { randomUUID } from 'crypto';
 
 const router = Router();
 
+const VALID_TRANSACTION_TYPES = ['compra con tarjeta', 'pago por pse', 'transferencia', 'pago programado', 'gasto manual'];
+const VALID_TYPES = ['ingreso', 'gasto'];
+
 router.post('/', async (req, res) => {
   try {
-    const { amount, description, transaction_date, transaction_type, type, notification_email, banco } = req.body;
-    if (!notification_email || !amount || !description || !transaction_date || !transaction_type || !type) {
-      return res.status(400).json({ error: 'Faltan campos requeridos: notification_email, amount, description, transaction_date, transaction_type, type' });
+    let { amount, description, transaction_date, transaction_type, type, notification_email, banco } = req.body;
+    if (!notification_email || !amount || !description || !transaction_date) {
+      return res.status(400).json({ error: 'Faltan campos requeridos: notification_email, amount, description, transaction_date' });
+    }
+    if (!VALID_TRANSACTION_TYPES.includes(transaction_type)) {
+      transaction_type = 'gasto manual';
+    }
+    if (!VALID_TYPES.includes(type)) {
+      type = 'gasto';
     }
     const user = await User.findOne({ email: notification_email.trim().toLowerCase() });
     if (!user) {
