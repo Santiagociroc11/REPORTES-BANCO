@@ -13,7 +13,8 @@
     "start": "npm run build && node server/index.js",
     "migrate": "node scripts/migrate-supabase-to-mongo.js",
     "migrate:dry": "node scripts/migrate-supabase-to-mongo.js --dry-run",
-    "migrate:clear": "node scripts/migrate-supabase-to-mongo.js --clear"
+    "migrate:clear": "node scripts/migrate-supabase-to-mongo.js --clear",
+    "seed-report-patterns": "node scripts/seed-report-patterns.js"
   },
   "dependencies": {
     "date-fns": "^3.3.1",
