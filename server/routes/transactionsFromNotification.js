@@ -5,6 +5,8 @@ import { randomUUID } from 'crypto';
 
 const router = Router();
 
+const DEDUP_WINDOW_MS = 5 * 60 * 1000; // 5 minutos
+
 router.post('/', async (req, res) => {
   try {
     const { amount, description, transaction_date, transaction_type, type, notification_email, banco } = req.body;
@@ -15,12 +17,31 @@ router.post('/', async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'Usuario no encontrado con ese correo de notificación' });
     }
+
+    const amountNum = Number(amount);
+    const descTrim = String(description).trim();
+    const txDate = new Date(transaction_date);
+    const from = new Date(txDate.getTime() - DEDUP_WINDOW_MS);
+    const to = new Date(txDate.getTime() + DEDUP_WINDOW_MS);
+
+    const existing = await Transaction.findOne({
+      user_id: user._id,
+      description: descTrim,
+      amount: amountNum,
+      transaction_date: { $gte: from, $lte: to }
+    }).lean();
+
+    if (existing) {
+      const result = { ...existing, id: existing._id };
+      return res.status(200).json(result);
+    }
+
     const transactionId = randomUUID();
     const transaction = await Transaction.create({
       _id: transactionId,
-      amount: Number(amount),
-      description: String(description).trim(),
-      transaction_date: new Date(transaction_date),
+      amount: amountNum,
+      description: descTrim,
+      transaction_date: txDate,
       transaction_type,
       type,
       notification_email: notification_email.trim(),
