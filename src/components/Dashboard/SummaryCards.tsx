@@ -77,7 +77,7 @@ export function SummaryCards({ transactions }: SummaryCardsProps) {
               Gastos de {format(now, 'MMMM', { locale: es })}
             </p>
             <p className="text-2xl font-bold text-white">
-              ${currentMonthTotal.toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+              ${currentMonthTotal.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
             </p>
             <p className="text-xs text-gray-500 mt-1">
               {currentMonthTransactions.length} transacciones

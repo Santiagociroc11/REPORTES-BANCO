@@ -55,7 +55,7 @@ export function TransactionForm({
         <div className="bg-gray-700 rounded-lg p-4">
           <p className="text-sm font-medium text-gray-400">Monto</p>
           <p className="mt-1 text-lg font-semibold text-white">
-            ${Number(transaction.amount).toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+            ${Number(transaction.amount).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
           </p>
         </div>
         <div className="bg-gray-700 rounded-lg p-4">

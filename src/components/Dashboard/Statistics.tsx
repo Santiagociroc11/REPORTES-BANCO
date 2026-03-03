@@ -823,7 +823,7 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
             <div>
               <p className="text-xs md:text-sm font-medium text-gray-400">Total Gastos</p>
               <p className="text-xl md:text-2xl font-bold text-white">
-                ${stats.totalGastos.toLocaleString('es-CO')}
+                ${stats.totalGastos.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
               </p>
               {period !== 'day' && (
                 <div className={`flex items-center text-xs mt-1 ${stats.trends.gastosTrend > 0 ? 'text-red-400' : stats.trends.gastosTrend < 0 ? 'text-green-400' : 'text-gray-400'}`}>
@@ -846,7 +846,7 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
             <div>
               <p className="text-xs md:text-sm font-medium text-gray-400">Total Ingresos</p>
               <p className="text-xl md:text-2xl font-bold text-white">
-                ${stats.totalIngresos.toLocaleString('es-CO')}
+                ${stats.totalIngresos.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
               </p>
               {period !== 'day' && (
                 <div className={`flex items-center text-xs mt-1 ${stats.trends.ingresosTrend > 0 ? 'text-green-400' : stats.trends.ingresosTrend < 0 ? 'text-red-400' : 'text-gray-400'}`}>
@@ -869,7 +869,7 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
             <div>
               <p className="text-xs md:text-sm font-medium text-gray-400">Balance Neto</p>
               <p className="text-xl md:text-2xl font-bold text-white">
-                ${stats.netBalance.toLocaleString('es-CO')}
+                ${stats.netBalance.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
               </p>
             </div>
             <div className={`p-2 md:p-3 rounded-full ${stats.netBalance >= 0 ? 'bg-green-900/30' : 'bg-red-900/30'}`}>
@@ -886,7 +886,7 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
             <div>
               <p className="text-xs md:text-sm font-medium text-gray-400">Promedio Diario</p>
               <p className="text-xl md:text-2xl font-bold text-white">
-                ${Math.round(stats.promedioDiario).toLocaleString('es-CO')}
+                ${Math.round(stats.promedioDiario).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
               </p>
             </div>
             <div className="bg-blue-900/30 p-2 md:p-3 rounded-full">
@@ -945,7 +945,7 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
                 labelStyle={{ color: '#F3F4F6', fontWeight: 'bold', marginBottom: '5px', fontSize: '13px' }}
                 formatter={(value: number, name: any) => {
                   // name viene como 'Gastos' o 'Ingresos' desde el componente Line
-                  return [`$${value.toLocaleString('es-CO')}`, name];
+                  return [`$${value.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}`, name];
                 }}
                 labelFormatter={(label: any, payload: any) => {
                   const item = payload && payload[0] ? payload[0].payload : null;
@@ -1053,7 +1053,7 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
                     fontSize: '12px',
                     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
                   }}
-                  formatter={(value: number) => [`$${value.toLocaleString('es-CO')}`, 'Monto']}
+                  formatter={(value: number) => [`$${value.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}`, 'Monto']}
                   labelFormatter={(label, payload) => {
                     const item = payload && payload[0] ? payload[0].payload : null;
                     return `Categoría: ${item && item.name ? item.name : (label || 'Sin categoría')}`;
@@ -1083,7 +1083,7 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
                     fontSize: 10,
                     formatter: (item: any) => {
                       if (!item || !item.total && item.total !== 0) return '';
-                      return `$${item.total >= 1000 ? `${(item.total/1000).toFixed(1)}k` : item.total}`;
+                      return `$${item.total >= 1000 ? `${(item.total/1000).toFixed(0)}k` : item.total}`;
                     },
                     offset: 5
                   }}
@@ -1161,7 +1161,7 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
                     fontSize: '12px',
                     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
                   }}
-                  formatter={(value: number, name) => [`$${value.toLocaleString('es-CO')}`, name]}
+                  formatter={(value: number, name) => [`$${value.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}`, name]}
                   labelStyle={{
                     color: '#FFFFFF',
                     fontWeight: 'bold',
@@ -1219,7 +1219,7 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
                     {category.name}
                   </td>
                   <td className="px-4 py-2 whitespace-nowrap text-xs md:text-sm text-gray-200">
-                    ${category.total.toLocaleString('es-CO')}
+                    ${category.total.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                   </td>
                   <td className="px-4 py-2 whitespace-nowrap text-xs md:text-sm text-gray-200">
                     {category.percentage.toFixed(1)}%
@@ -1249,8 +1249,8 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium text-white">Gastos: ${stats.totalGastos.toLocaleString('es-CO')}</p>
-                  <p className="text-xs text-gray-300">Ingresos: ${stats.totalIngresos.toLocaleString('es-CO')}</p>
+                  <p className="text-sm font-medium text-white">Gastos: ${stats.totalGastos.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}</p>
+                  <p className="text-xs text-gray-300">Ingresos: ${stats.totalIngresos.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}</p>
                 </div>
               </div>
             </div>
@@ -1262,8 +1262,8 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
                   <p className="text-xs text-gray-400">{stats.periodComparison.previousPeriodLabel}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium text-white">Gastos: ${stats.periodComparison.previousGastos.toLocaleString('es-CO')}</p>
-                  <p className="text-xs text-gray-300">Ingresos: ${stats.periodComparison.previousIngresos.toLocaleString('es-CO')}</p>
+                  <p className="text-sm font-medium text-white">Gastos: ${stats.periodComparison.previousGastos.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}</p>
+                  <p className="text-xs text-gray-300">Ingresos: ${stats.periodComparison.previousIngresos.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}</p>
                 </div>
               </div>
             </div>
@@ -1298,13 +1298,13 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
                       {item.category}
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap text-xs md:text-sm text-gray-200">
-                      ${item.currentAmount.toLocaleString('es-CO')}
+                      ${item.currentAmount.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap text-xs md:text-sm text-gray-200">
-                      ${item.previousAmount.toLocaleString('es-CO')}
+                      ${item.previousAmount.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                     </td>
                     <td className={`px-4 py-2 whitespace-nowrap text-xs md:text-sm ${item.absoluteChange >= 0 ? 'text-red-400' : 'text-green-400'}`}>
-                      {item.absoluteChange >= 0 ? '+' : ''}{item.absoluteChange.toLocaleString('es-CO')}
+                      {item.absoluteChange >= 0 ? '+' : ''}{item.absoluteChange.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                     </td>
                     <td className={`px-4 py-2 whitespace-nowrap text-xs md:text-sm ${item.percentageChange >= 0 ? 'text-red-400' : 'text-green-400'}`}>
                       {item.percentageChange >= 0 ? '+' : ''}{item.percentageChange.toFixed(1)}%
@@ -1404,10 +1404,10 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-medium text-white">
-                      ${trend.currentAmount.toLocaleString('es-CO')}
+                      ${trend.currentAmount.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                     </div>
                     <div className="text-xs text-gray-400">
-                      vs ${trend.previousAmount.toLocaleString('es-CO')}
+                      vs ${trend.previousAmount.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                     </div>
                   </div>
                 </div>
@@ -1444,7 +1444,7 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
                 <Target className="h-4 w-4 text-blue-400" />
               </div>
               <div className="text-xl font-bold text-white">
-                ${Math.round(stats.predictions.predictedTotal).toLocaleString('es-CO')}
+                ${Math.round(stats.predictions.predictedTotal).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
               </div>
               <div className="text-xs text-gray-400 mt-1">
                 Basado en tu promedio diario actual
@@ -1457,7 +1457,7 @@ export function Statistics({ transactions, period, onPeriodChange, categories }:
                 <Clock className="h-4 w-4 text-orange-400" />
               </div>
               <div className="text-xl font-bold text-white">
-                ${Math.round(stats.predictions.predictedRemaining).toLocaleString('es-CO')}
+                ${Math.round(stats.predictions.predictedRemaining).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
               </div>
               <div className="text-xs text-gray-400 mt-1">
                 En los próximos {stats.predictions.daysRemaining} días

@@ -95,7 +95,7 @@ function TransactionDetailModal({ transaction, onClose, onReport, onDelete, onEd
             <div>
               <p className="text-xs">Monto</p>
               <p className="text-2xl font-bold">
-                ${Number(transaction.amount).toLocaleString('es-CO')}
+                ${Number(transaction.amount).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
               </p>
             </div>
             <div>
@@ -638,7 +638,7 @@ export function TransactionList({
                         )}
                       </div>
                       <p className="text-base font-semibold text-gray-100">
-                        ${Number(transaction.amount).toLocaleString('es-CO')}
+                        ${Number(transaction.amount).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                       </p>
                     </div>
                     {transaction.reported && transaction.category_id && categories && (
@@ -717,7 +717,7 @@ export function TransactionList({
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm font-medium text-gray-100">
-                          ${Number(transaction.amount).toLocaleString('es-CO')}
+                          ${Number(transaction.amount).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                         </span>
                       </td>
                       <td className="px-6 py-4">

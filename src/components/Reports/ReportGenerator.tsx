@@ -77,7 +77,7 @@ export function ReportGenerator({ transactions, startDate, endDate, categories }
           format(new Date(t.transaction_date), 'PPP', { locale: es }),
           format(new Date(t.transaction_date), 'hh:mm a', { locale: es }),
           t.transaction_type,
-          `$${t.amount.toLocaleString('es-CO')}`,
+          `$${t.amount.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}`,
           t.description,
           t.comment || '',
           fullCategory,

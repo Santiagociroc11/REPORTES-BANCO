@@ -123,7 +123,7 @@ export function EditTransactionModal({
                     <div>
                       <p className="text-sm text-gray-400">Monto</p>
                       <p className="text-lg font-semibold text-white">
-                        ${Number(transaction.amount).toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+                        ${Number(transaction.amount).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                       </p>
                     </div>
                   </div>

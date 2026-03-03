@@ -288,13 +288,13 @@ export function TotalTable({ transactions, categories }: TotalTableProps) {
                     {data.months.map((month) => (
                       <th key={month.key} className="px-4 py-3 text-center">
                         <span className="text-sm font-medium text-green-300/90 tabular-nums">
-                          ${(data.monthTotalsSinFacebookAds[month.key] || 0).toLocaleString('es-CO')}
+                          ${(data.monthTotalsSinFacebookAds[month.key] || 0).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                         </span>
                       </th>
                     ))}
                     <th className="px-4 py-3 text-center">
                       <span className="inline-block px-3 py-1.5 rounded-lg bg-green-500/15 text-base font-bold text-green-300 border border-green-500/30 tabular-nums">
-                        ${(data.totalSinFacebookAds || 0).toLocaleString('es-CO')}
+                        ${(data.totalSinFacebookAds || 0).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                       </span>
                     </th>
                   </tr>
@@ -307,13 +307,13 @@ export function TotalTable({ transactions, categories }: TotalTableProps) {
                     {data.months.map((month) => (
                       <th key={month.key} className="px-4 py-3 text-center">
                         <span className="text-sm font-semibold text-blue-300 tabular-nums">
-                          ${(data.monthTotals[month.key] || 0).toLocaleString('es-CO')}
+                          ${(data.monthTotals[month.key] || 0).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                         </span>
                       </th>
                     ))}
                     <th className="px-4 py-3 text-center">
                       <span className="inline-block px-4 py-2 rounded-xl bg-blue-500/20 text-lg font-bold text-blue-300 border border-blue-500/40 tabular-nums shadow-sm">
-                        ${(data.totalGeneral || 0).toLocaleString('es-CO')}
+                        ${(data.totalGeneral || 0).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                       </span>
                     </th>
                   </tr>
@@ -368,7 +368,7 @@ export function TotalTable({ transactions, categories }: TotalTableProps) {
                     return (
                       <td key={month.key} className="px-4 py-3 text-center">
                         <div className="text-sm text-white font-medium">
-                          {amount > 0 ? `$${amount.toLocaleString('es-CO')}` : '-'}
+                          {amount > 0 ? `$${amount.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}` : '-'}
                         </div>
                         {monthIndex > 0 && amount > 0 && getChangeIndicator(changePercent)}
                       </td>
@@ -376,7 +376,7 @@ export function TotalTable({ transactions, categories }: TotalTableProps) {
                   })}
                   <td className="px-4 py-3 text-center">
                     <div className="text-sm font-bold text-blue-400">
-                      ${row.total.toLocaleString('es-CO')}
+                      ${row.total.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                     </div>
                   </td>
                 </tr>
@@ -427,7 +427,7 @@ export function TotalTable({ transactions, categories }: TotalTableProps) {
                       {change.isIncrease ? '+' : ''}{change.changePercent.toFixed(1)}%
                     </div>
                     <div className="text-xs text-gray-300">
-                      ${change.amount.toLocaleString('es-CO')}
+                      ${change.amount.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                     </div>
                   </div>
                 </div>
@@ -482,7 +482,7 @@ export function TotalTable({ transactions, categories }: TotalTableProps) {
                 <BarChart3 className="h-4 w-4 text-red-400" />
               </div>
               <div className="text-xl font-bold text-white">
-                ${sortedData.reduce((sum, row) => sum + row.total, 0).toLocaleString('es-CO')}
+                ${sortedData.reduce((sum, row) => sum + row.total, 0).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
               </div>
             </div>
             
@@ -492,7 +492,7 @@ export function TotalTable({ transactions, categories }: TotalTableProps) {
                 <Calendar className="h-4 w-4 text-green-400" />
               </div>
               <div className="text-xl font-bold text-white">
-                ${Math.round(sortedData.reduce((sum, row) => sum + row.total, 0) / data.months.length).toLocaleString('es-CO')}
+                ${Math.round(sortedData.reduce((sum, row) => sum + row.total, 0) / data.months.length).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
               </div>
             </div>
           </div>

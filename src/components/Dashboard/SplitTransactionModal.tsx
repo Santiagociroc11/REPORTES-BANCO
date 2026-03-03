@@ -42,7 +42,7 @@ export function SplitTransactionModal({
   // Reiniciar campos cuando cambia la transacción
   useEffect(() => {
     if (transaction) {
-      const halfAmount = (Number(transaction.amount) / 2).toFixed(2);
+      const halfAmount = (Number(transaction.amount) / 2).toFixed(0);
       setPart1Amount(halfAmount);
       setPart2Amount(halfAmount);
       setPart1Description('');
@@ -76,7 +76,7 @@ export function SplitTransactionModal({
     setPart1Amount(value);
     if (value) {
       const remaining = totalAmount - Number(value);
-      setPart2Amount(remaining > 0 ? remaining.toFixed(2) : '0');
+      setPart2Amount(remaining > 0 ? remaining.toFixed(0) : '0');
     }
   };
 
@@ -84,7 +84,7 @@ export function SplitTransactionModal({
     setPart2Amount(value);
     if (value) {
       const remaining = totalAmount - Number(value);
-      setPart1Amount(remaining > 0 ? remaining.toFixed(2) : '0');
+      setPart1Amount(remaining > 0 ? remaining.toFixed(0) : '0');
     }
   };
 
@@ -200,7 +200,7 @@ export function SplitTransactionModal({
                     <div className="text-center">
                       <p className="text-sm text-gray-400 mb-2">Transacción Original</p>
                       <p className="text-lg font-semibold text-white">
-                        ${Number(transaction.amount).toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+                        ${Number(transaction.amount).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                       </p>
                       <p className="text-sm text-gray-300">{transaction.description}</p>
                       <p className="text-xs text-gray-400 mt-1">
@@ -361,20 +361,20 @@ export function SplitTransactionModal({
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-gray-300">Total original:</span>
                         <span className="text-white font-medium">
-                          ${totalAmount.toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+                          ${totalAmount.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                         </span>
                       </div>
                       <div className="flex justify-between items-center text-sm mt-1">
                         <span className="text-gray-300">Total dividido:</span>
                         <span className="text-white font-medium">
-                          ${currentTotal.toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+                          ${currentTotal.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                         </span>
                       </div>
                       {!isValidSplit && (
                         <div className="flex justify-between items-center text-sm mt-1">
                           <span className="text-red-400">Diferencia:</span>
                           <span className="text-red-400 font-medium">
-                            ${Math.abs(difference).toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+                            ${Math.abs(difference).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                           </span>
                         </div>
                       )}
