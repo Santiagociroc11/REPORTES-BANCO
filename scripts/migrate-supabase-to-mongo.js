@@ -1,26 +1,16 @@
 #!/usr/bin/env node
 /**
  * Script de migración: Supabase → MongoDB
- * 
+ * Usa el driver nativo de MongoDB para mayor compatibilidad con conexiones remotas.
+ *
  * Uso:
  *   node scripts/migrate-supabase-to-mongo.js
  *   node scripts/migrate-supabase-to-mongo.js --dry-run
  *   node scripts/migrate-supabase-to-mongo.js --clear
- * 
- * Variables de entorno requeridas:
- *   SUPABASE_URL      - URL del proyecto Supabase (ej: https://xxx.supabase.co)
- *   SUPABASE_ANON_KEY - Clave anónima de Supabase
- *   MONGODB_URI       - Cadena de conexión MongoDB (ej: mongodb://localhost:27017/reportes-banco)
  */
 
 import 'dotenv/config';
-import mongoose from 'mongoose';
-import { User } from '../server/models/User.js';
-import { Transaction } from '../server/models/Transaction.js';
-import { Category } from '../server/models/Category.js';
-import { Tag } from '../server/models/Tag.js';
-import { TransactionTag } from '../server/models/TransactionTag.js';
-import { TelegramConfig } from '../server/models/TelegramConfig.js';
+import { MongoClient } from 'mongodb';
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const CLEAR_FIRST = process.argv.includes('--clear');
@@ -30,8 +20,7 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPA
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/reportes-banco';
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.error('❌ Faltan variables de entorno: SUPABASE_URL y SUPABASE_ANON_KEY');
-  console.error('   Añádelas a .env o usa VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY');
+  console.error('❌ Faltan variables: SUPABASE_URL y SUPABASE_ANON_KEY');
   process.exit(1);
 }
 
@@ -45,11 +34,7 @@ async function fetchFromSupabase(table) {
       'Content-Type': 'application/json',
     },
   });
-
-  if (!response.ok) {
-    throw new Error(`Supabase ${table}: ${response.status} ${response.statusText}`);
-  }
-
+  if (!response.ok) throw new Error(`Supabase ${table}: ${response.status}`);
   return response.json();
 }
 
@@ -60,134 +45,120 @@ function toMongoDoc(doc, idField = 'id') {
 
 async function migrate() {
   console.log('🚀 Migración Supabase → MongoDB\n');
-  if (DRY_RUN) console.log('   [MODO DRY-RUN - no se escribirá en MongoDB]\n');
+  if (DRY_RUN) console.log('   [MODO DRY-RUN]\n');
 
-  // 1. Conectar a MongoDB
+  let client;
   if (!DRY_RUN) {
-    await mongoose.connect(MONGODB_URI);
+    client = new MongoClient(MONGODB_URI, {
+      serverSelectionTimeoutMS: 30000,
+      connectTimeoutMS: 30000,
+    });
+    await client.connect();
     console.log('✓ Conectado a MongoDB\n');
   }
 
   try {
-    // 2. Opcional: limpiar colecciones
+    const db = client?.db('reportes-banco');
+
     if (CLEAR_FIRST && !DRY_RUN) {
-      console.log('🗑️  Limpiando colecciones existentes...');
-      await TransactionTag.deleteMany({});
-      await Transaction.deleteMany({});
-      await TelegramConfig.deleteMany({});
-      await Tag.deleteMany({});
-      await Category.deleteMany({});
-      await User.deleteMany({});
-      console.log('✓ Colecciones limpiadas\n');
+      console.log('🗑️  Limpiando colecciones...');
+      const collections = ['transactiontags', 'transactions', 'telegramconfigs', 'tags', 'categories', 'users'];
+      for (const name of collections) {
+        try {
+          await db.collection(name).deleteMany({});
+        } catch (_) {}
+      }
+      console.log('✓ Limpiado\n');
     }
 
-    // 3. Migrar usuarios
-    console.log('📥 Extrayendo usuarios de Supabase...');
+    // Usuarios
+    console.log('📥 Extrayendo usuarios...');
     const users = await fetchFromSupabase('users');
     console.log(`   Encontrados: ${users.length}`);
-
     if (!DRY_RUN && users.length > 0) {
-      const userDocs = users.map(u => toMongoDoc(u));
-      await User.insertMany(userDocs);
+      const docs = users.map(u => toMongoDoc(u));
+      await db.collection('users').insertMany(docs);
       console.log('✓ Usuarios migrados\n');
-    } else {
-      console.log('   [dry-run] Usuarios listos para migrar\n');
-    }
+    } else if (users.length > 0) console.log('   [dry-run]\n');
 
-    // 4. Migrar categorías
-    console.log('📥 Extrayendo categorías de Supabase...');
+    // Categorías
+    console.log('📥 Extrayendo categorías...');
     const categories = await fetchFromSupabase('categories');
     console.log(`   Encontradas: ${categories.length}`);
-
     if (!DRY_RUN && categories.length > 0) {
-      const categoryDocs = categories.map(c => toMongoDoc(c));
-      await Category.insertMany(categoryDocs);
+      const docs = categories.map(c => toMongoDoc(c));
+      await db.collection('categories').insertMany(docs);
       console.log('✓ Categorías migradas\n');
-    } else {
-      console.log('   [dry-run] Categorías listas para migrar\n');
-    }
+    } else if (categories.length > 0) console.log('   [dry-run]\n');
 
-    // 5. Migrar tags
-    console.log('📥 Extrayendo tags de Supabase...');
+    // Tags
+    console.log('📥 Extrayendo tags...');
     const tags = await fetchFromSupabase('tags');
     console.log(`   Encontrados: ${tags.length}`);
-
     if (!DRY_RUN && tags.length > 0) {
-      const tagDocs = tags.map(t => toMongoDoc(t));
-      await Tag.insertMany(tagDocs);
+      const docs = tags.map(t => toMongoDoc(t));
+      await db.collection('tags').insertMany(docs);
       console.log('✓ Tags migrados\n');
-    } else {
-      console.log('   [dry-run] Tags listos para migrar\n');
-    }
+    } else if (tags.length > 0) console.log('   [dry-run]\n');
 
-    // 6. Migrar telegram_config
-    console.log('📥 Extrayendo configuración de Telegram...');
+    // Telegram config
+    console.log('📥 Extrayendo telegram_config...');
     let telegramConfigs = [];
     try {
       telegramConfigs = await fetchFromSupabase('telegram_config');
-    } catch (e) {
-      console.log('   (tabla telegram_config no existe o vacía)');
-    }
+    } catch (_) {}
     console.log(`   Encontradas: ${telegramConfigs.length}`);
-
     if (!DRY_RUN && telegramConfigs.length > 0) {
-      const tgDocs = telegramConfigs.map(t => toMongoDoc(t));
-      await TelegramConfig.insertMany(tgDocs);
-      console.log('✓ Configuración Telegram migrada\n');
-    } else if (telegramConfigs.length > 0) {
-      console.log('   [dry-run] Config Telegram lista para migrar\n');
-    }
+      const docs = telegramConfigs.map(t => toMongoDoc(t));
+      await db.collection('telegramconfigs').insertMany(docs);
+      console.log('✓ Telegram config migrada\n');
+    } else if (telegramConfigs.length > 0) console.log('   [dry-run]\n');
 
-    // 7. Migrar transacciones
-    console.log('📥 Extrayendo transacciones de Supabase...');
+    // Transacciones
+    console.log('📥 Extrayendo transacciones...');
     const transactions = await fetchFromSupabase('transactions');
     console.log(`   Encontradas: ${transactions.length}`);
-
     if (!DRY_RUN && transactions.length > 0) {
-      const txDocs = transactions.map(t => {
+      const docs = transactions.map(t => {
         const doc = toMongoDoc(t);
         if (doc.transaction_date && typeof doc.transaction_date === 'string') {
           doc.transaction_date = new Date(doc.transaction_date);
         }
         return doc;
       });
-      await Transaction.insertMany(txDocs);
+      // Insertar en lotes de 100
+      const BATCH = 100;
+      for (let i = 0; i < docs.length; i += BATCH) {
+        const batch = docs.slice(i, i + BATCH);
+        await db.collection('transactions').insertMany(batch);
+        process.stdout.write(`   ${Math.min(i + BATCH, docs.length)}/${docs.length}\r`);
+      }
       console.log('✓ Transacciones migradas\n');
-    } else if (transactions.length > 0) {
-      console.log('   [dry-run] Transacciones listas para migrar\n');
-    }
+    } else if (transactions.length > 0) console.log('   [dry-run]\n');
 
-    // 8. Migrar transaction_tags
-    console.log('📥 Extrayendo relación transacción-etiquetas...');
+    // Transaction tags
+    console.log('📥 Extrayendo transaction_tags...');
     let transactionTags = [];
     try {
       transactionTags = await fetchFromSupabase('transaction_tags');
-    } catch (e) {
-      console.log('   (tabla transaction_tags no existe o vacía)');
-    }
+    } catch (_) {}
     console.log(`   Encontradas: ${transactionTags.length}`);
-
     if (!DRY_RUN && transactionTags.length > 0) {
-      const ttDocs = transactionTags.map((tt) => {
+      const docs = transactionTags.map(tt => {
         const { id, ...rest } = tt;
         return { _id: id || `tt-${rest.transaction_id}-${rest.tag_id}`, ...rest };
       });
-      await TransactionTag.insertMany(ttDocs);
-      console.log('✓ Relaciones transacción-etiquetas migradas\n');
-    } else if (transactionTags.length > 0) {
-      console.log('   [dry-run] Transaction_tags listas para migrar\n');
-    }
+      await db.collection('transactiontags').insertMany(docs);
+      console.log('✓ Transaction_tags migradas\n');
+    } else if (transactionTags.length > 0) console.log('   [dry-run]\n');
 
     console.log('✅ Migración completada correctamente');
   } catch (error) {
-    console.error('\n❌ Error durante la migración:', error.message);
-    if (error.response) {
-      console.error('   Respuesta:', await error.response.text());
-    }
+    console.error('\n❌ Error:', error.message);
     process.exit(1);
   } finally {
-    if (!DRY_RUN) {
-      await mongoose.disconnect();
+    if (client) {
+      await client.close();
       console.log('\n✓ Desconectado de MongoDB');
     }
   }

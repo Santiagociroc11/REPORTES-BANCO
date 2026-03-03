@@ -48,14 +48,13 @@ La aplicación ha sido migrada completamente de Supabase a MongoDB.
 
 5. Abre http://localhost:5173
 
-### Con Docker Compose
+### Con Docker (monolito)
 
 ```bash
 docker-compose up -d
 ```
 
-- Frontend: http://localhost:4445
-- API: http://localhost:3000
+- **App** (frontend + API): http://localhost:3000
 - MongoDB: localhost:27017
 
 ## Variables de entorno

@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "server": "cd server && npm run dev",
     "server:start": "cd server && npm start",
+    "start": "npm run build && node server/index.js",
     "migrate": "node scripts/migrate-supabase-to-mongo.js",
     "migrate:dry": "node scripts/migrate-supabase-to-mongo.js --dry-run",
     "migrate:clear": "node scripts/migrate-supabase-to-mongo.js --clear"
@@ -29,6 +30,7 @@
   },
   "devDependencies": {
     "dotenv": "^16.4.5",
+    "mongodb": "^6.10.0",
     "mongoose": "^8.5.0",
     "@eslint/js": "^9.9.1",
     "@types/js-cookie": "^3.0.6",

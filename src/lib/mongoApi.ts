@@ -2,7 +2,7 @@
  * Cliente API para MongoDB - reemplaza las llamadas a Supabase
  */
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3000/api' : '/api');
 
 async function fetchApi<T>(
   endpoint: string,
