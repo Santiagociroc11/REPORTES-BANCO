@@ -56,6 +56,47 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.get('/search-history', async (req, res) => {
+  try {
+    const { user_id, q } = req.query;
+    if (!user_id || !q || String(q).trim().length < 2) {
+      return res.status(400).json({ error: 'user_id y q (mínimo 2 caracteres) son requeridos' });
+    }
+
+    const term = String(q).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(term, 'i');
+
+    const categories = await Category.find({ user_id }).select('_id name').lean();
+    const categoryNames = Object.fromEntries(categories.map((c) => [String(c._id), c.name]));
+    const matchingCatIds = categories.filter((c) => re.test(c.name)).map((c) => String(c._id));
+
+    const transactions = await Transaction.find({
+      user_id,
+      reported: true,
+      $or: [{ description: re }, { category_id: { $in: matchingCatIds } }]
+    })
+      .sort({ transaction_date: -1 })
+      .limit(20)
+      .select('_id description amount transaction_date category_id comment')
+      .lean();
+
+    const result = transactions.map((t) => ({
+      id: t._id,
+      description: t.description,
+      amount: t.amount,
+      transaction_date: t.transaction_date,
+      category_id: t.category_id || null,
+      category_name: categoryNames[String(t.category_id)] || null,
+      comment: t.comment || ''
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error('Search history error:', error);
+    res.status(500).json({ error: 'Error al buscar en historial' });
+  }
+});
+
 router.post('/suggest-report', async (req, res) => {
   try {
     const { transaction_id, user_id } = req.body;

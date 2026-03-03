@@ -91,6 +91,18 @@ export async function setTransactionTags(transactionId: string, tagIds: string[]
   });
 }
 
+export async function searchHistoryTransactions(userId: string, query: string) {
+  return fetchApi<Array<{
+    id: string;
+    description: string;
+    amount: number;
+    transaction_date: string;
+    category_id: string | null;
+    category_name: string | null;
+    comment: string;
+  }>>(`/transactions/search-history?user_id=${encodeURIComponent(userId)}&q=${encodeURIComponent(query)}`);
+}
+
 export async function suggestReport(transactionId: string, userId: string) {
   return fetchApi<{
     category_id: string | null;

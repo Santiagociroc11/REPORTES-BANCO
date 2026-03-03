@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { X, Calendar, CreditCard, FileText, FolderTree, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Calendar, CreditCard, FileText, FolderTree, Sparkles, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Transaction, Tag, CustomCategory } from '../../types';
@@ -37,7 +37,10 @@ export function ReportTransactionModal({
   const [reasoning, setReasoning] = useState('');
   const [alternatives, setAlternatives] = useState<Array<{ category_id: string; category_name: string; count: number }>>([]);
   const [exactMatch, setExactMatch] = useState(false);
-  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; description: string; amount: number; transaction_date: string; category_id: string | null; category_name: string | null; comment: string }>>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+
   // Estado para controlar el modal de nueva categoría
   const [showNewCategoryModal, setShowNewCategoryModal] = useState(false);
 
@@ -51,7 +54,28 @@ export function ReportTransactionModal({
     setReasoning('');
     setAlternatives([]);
     setExactMatch(false);
+    setSearchQuery('');
+    setSearchResults([]);
   }, [transaction]);
+
+  // Búsqueda en historial (debounced)
+  useEffect(() => {
+    if (!searchQuery.trim() || searchQuery.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    const user = getStoredUser();
+    if (!user?.id) return;
+
+    const t = setTimeout(() => {
+      setSearchLoading(true);
+      mongoApi.searchHistoryTransactions(user.id, searchQuery.trim())
+        .then(setSearchResults)
+        .catch(() => setSearchResults([]))
+        .finally(() => setSearchLoading(false));
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
   // Obtener sugerencia RAG al abrir el modal
   useEffect(() => {
@@ -228,6 +252,49 @@ export function ReportTransactionModal({
                       )}
                     </div>
                   )}
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-400 mb-2">
+                      <Search className="h-4 w-4 inline mr-1" />
+                      Buscar en historial
+                    </label>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Ej: D1, restaurante, mercado..."
+                      className="block w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      minLength={2}
+                    />
+                    {searchLoading && (
+                      <p className="mt-1 text-xs text-gray-500">Buscando...</p>
+                    )}
+                    {searchResults.length > 0 && (
+                      <ul className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-gray-600 bg-gray-800/50 divide-y divide-gray-600">
+                        {searchResults.map((t) => (
+                          <li key={t.id}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (t.category_id) setSelectedCategory(t.category_id);
+                                setComment(t.comment || '');
+                              }}
+                              className="w-full text-left px-3 py-2 hover:bg-gray-700/80 transition-colors"
+                            >
+                              <span className="text-sm text-white block truncate">{t.description}</span>
+                              <span className="text-xs text-gray-400">
+                                {t.category_name || 'Sin categoría'}
+                                {t.comment && ` · ${t.comment}`}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {searchQuery.trim().length >= 2 && !searchLoading && searchResults.length === 0 && (
+                      <p className="mt-1 text-xs text-gray-500">Sin resultados</p>
+                    )}
+                  </div>
 
                   <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
