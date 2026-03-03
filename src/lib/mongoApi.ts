@@ -92,13 +92,16 @@ export async function setTransactionTags(transactionId: string, tagIds: string[]
 }
 
 export async function suggestReport(transactionId: string, userId: string) {
-  return fetchApi<{ category_id: string; comment: string; reasoning: string }>(
-    '/transactions/suggest-report',
-    {
-      method: 'POST',
-      body: JSON.stringify({ transaction_id: transactionId, user_id: userId }),
-    }
-  );
+  return fetchApi<{
+    category_id: string | null;
+    comment: string;
+    reasoning: string;
+    alternatives?: Array<{ category_id: string; category_name: string; count: number }>;
+    exactMatch?: boolean;
+  }>('/transactions/suggest-report', {
+    method: 'POST',
+    body: JSON.stringify({ transaction_id: transactionId, user_id: userId }),
+  });
 }
 
 // Categories

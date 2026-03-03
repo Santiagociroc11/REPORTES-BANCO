@@ -107,6 +107,14 @@ function suggestFromPatterns(patterns, categories, components = null) {
   const categoryId = valid ? bestCat : (categories[0]?._id ?? null);
   const catName = categories.find((c) => String(c._id) === categoryId)?.name || '';
 
+  const alternatives = [...catCount.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([cid, n]) => {
+      const c = categories.find((x) => String(x._id) === cid);
+      return { category_id: cid, category_name: c?.name || 'Sin nombre', count: n };
+    });
+
   let reasoning;
   if (components?.merchant || components?.searchTerms?.length) {
     const parts = [];
@@ -120,13 +128,33 @@ function suggestFromPatterns(patterns, categories, components = null) {
   return {
     category_id: categoryId,
     comment: bestComment.trim(),
-    reasoning
+    reasoning,
+    alternatives
   };
 }
 
 export async function suggestReport({ transaction, userId }) {
-  const { patterns, fromFallback, components } = await findSimilarPatterns({ transaction, userId });
   const categories = await Category.find({ user_id: userId }).lean();
+
+  const exactMatch = await ReportPattern.findOne({
+    user_id: userId,
+    transaction_type: transaction.transaction_type,
+    description: transaction.description
+  }).lean();
+
+  if (exactMatch && exactMatch.category_id) {
+    const cat = categories.find((c) => String(c._id) === exactMatch.category_id);
+    const catName = cat?.name || 'Sin nombre';
+    return {
+      category_id: exactMatch.category_id,
+      comment: exactMatch.comment || '',
+      reasoning: `Coincidencia exacta: esta descripción coincide exactamente con un reporte anterior (${catName}).`,
+      alternatives: [],
+      exactMatch: true
+    };
+  }
+
+  const { patterns, fromFallback, components } = await findSimilarPatterns({ transaction, userId });
 
   if (fromFallback) {
     let reasoning = 'Sin transacciones similares en el historial. Selecciona manualmente.';

@@ -5,8 +5,8 @@ import { es } from 'date-fns/locale';
 import { Transaction, Tag, CustomCategory } from '../../types';
 import * as mongoApi from '../../lib/mongoApi';
 import { getStoredUser } from '../../lib/auth';
-import { buildCategoryHierarchy } from '../../utils/categories';
 import { NewCategoryModal } from './NewCategoryModal';
+import { CategorySearchSelect } from './CategorySearchSelect';
 
 interface ReportTransactionModalProps {
   isOpen: boolean;
@@ -35,6 +35,8 @@ export function ReportTransactionModal({
   const [suggesting, setSuggesting] = useState(false);
   const [suggestionError, setSuggestionError] = useState('');
   const [reasoning, setReasoning] = useState('');
+  const [alternatives, setAlternatives] = useState<Array<{ category_id: string; category_name: string; count: number }>>([]);
+  const [exactMatch, setExactMatch] = useState(false);
   
   // Estado para controlar el modal de nueva categoría
   const [showNewCategoryModal, setShowNewCategoryModal] = useState(false);
@@ -47,6 +49,8 @@ export function ReportTransactionModal({
     setShowNewCategoryModal(false);
     setSuggestionError('');
     setReasoning('');
+    setAlternatives([]);
+    setExactMatch(false);
   }, [transaction]);
 
   // Obtener sugerencia RAG al abrir el modal
@@ -62,23 +66,14 @@ export function ReportTransactionModal({
         if (suggestion.category_id) setSelectedCategory(suggestion.category_id);
         if (suggestion.comment) setComment(suggestion.comment);
         if (suggestion.reasoning) setReasoning(suggestion.reasoning);
+        if (suggestion.alternatives) setAlternatives(suggestion.alternatives);
+        setExactMatch(suggestion.exactMatch ?? false);
       })
       .catch((err) => {
         setSuggestionError(err instanceof Error ? err.message : 'No se pudo obtener sugerencia');
       })
       .finally(() => setSuggesting(false));
   }, [isOpen, transaction?.id]);
-
-  const categoryHierarchy = useMemo(() => buildCategoryHierarchy(categories), [categories]);
-
-  const renderCategoryOptions = (categories: CustomCategory[], level = 0): JSX.Element[] => {
-    return categories.flatMap(category => [
-      <option key={category.id} value={category.id}>
-        {'  '.repeat(level)}{level > 0 ? '└─ ' : ''}{category.name}
-      </option>,
-      ...(category.subcategories ? renderCategoryOptions(category.subcategories, level + 1) : [])
-    ]);
-  };
 
   if (!isOpen || !transaction) return null;
 
@@ -201,9 +196,36 @@ export function ReportTransactionModal({
                   )}
 
                   {reasoning && !suggesting && (
-                    <div className="mb-4 flex gap-2 rounded-lg border border-gray-600 bg-gray-800/50 px-4 py-3 text-sm text-gray-300">
-                      <Sparkles className="h-4 w-4 flex-shrink-0 text-blue-400" />
-                      <span>{reasoning}</span>
+                    <div className={`mb-4 rounded-lg px-4 py-3 text-sm text-gray-300 ${
+                      exactMatch
+                        ? 'border border-green-500/50 bg-green-500/10'
+                        : 'border border-gray-600 bg-gray-800/50'
+                    }`}>
+                      <div className="flex gap-2">
+                        <Sparkles className="h-4 w-4 flex-shrink-0 text-blue-400" />
+                        <span>{reasoning}</span>
+                      </div>
+                      {alternatives.length > 1 && (
+                        <div className="mt-3 pt-3 border-t border-gray-600">
+                          <p className="text-xs text-gray-400 mb-2">Otras opciones encontradas:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {alternatives.map((alt) => (
+                              <button
+                                key={alt.category_id}
+                                type="button"
+                                onClick={() => setSelectedCategory(alt.category_id)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                  selectedCategory === alt.category_id
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                }`}
+                              >
+                                {alt.category_name} ({alt.count})
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -213,16 +235,15 @@ export function ReportTransactionModal({
                         <FolderTree className="h-4 w-4 inline mr-1" />
                         Categoría
                       </label>
-                      <select
+                      <CategorySearchSelect
                         id="category"
+                        categories={categories}
                         value={selectedCategory}
-                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedCategory(e.target.value)}
-                        className="block w-full rounded-lg border border-gray-600 bg-gray-700 px-3 py-2 text-white focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        onChange={setSelectedCategory}
+                        placeholder="Buscar categoría..."
                         required
-                      >
-                        <option value="">Selecciona una categoría</option>
-                        {renderCategoryOptions(categoryHierarchy)}
-                      </select>
+                        disabled={suggesting}
+                      />
                       <div className="mt-2">
                         <button
                           type="button"
