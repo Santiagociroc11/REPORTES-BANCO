@@ -3,6 +3,8 @@ import { Transaction } from '../models/Transaction.js';
 import { TransactionTag } from '../models/TransactionTag.js';
 import { Category } from '../models/Category.js';
 import { randomUUID } from 'crypto';
+import { suggestReport } from '../services/suggestReportService.js';
+import { saveReportPattern } from '../services/saveReportPattern.js';
 
 const router = Router();
 
@@ -54,6 +56,37 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.post('/suggest-report', async (req, res) => {
+  try {
+    const { transaction_id, user_id } = req.body;
+    if (!transaction_id || !user_id) {
+      return res.status(400).json({ error: 'transaction_id y user_id son requeridos' });
+    }
+
+    const transaction = await Transaction.findById(transaction_id).lean();
+    if (!transaction) {
+      return res.status(404).json({ error: 'Transacción no encontrada' });
+    }
+    if (String(transaction.user_id) !== String(user_id)) {
+      return res.status(403).json({ error: 'Transacción no pertenece al usuario' });
+    }
+
+    const suggestion = await suggestReport({
+      transaction: {
+        description: transaction.description,
+        amount: transaction.amount,
+        transaction_type: transaction.transaction_type
+      },
+      userId: user_id
+    });
+
+    res.json(suggestion);
+  } catch (error) {
+    console.error('Suggest report error:', error);
+    res.status(500).json({ error: error.message || 'Error al obtener sugerencia' });
+  }
+});
+
 router.patch('/:id', async (req, res) => {
   try {
     const transaction = await Transaction.findByIdAndUpdate(
@@ -64,6 +97,18 @@ router.patch('/:id', async (req, res) => {
     if (!transaction) {
       return res.status(404).json({ error: 'Transacción no encontrada' });
     }
+
+    if (req.body.reported === true) {
+      try {
+        await saveReportPattern({
+          transaction: transaction.toObject(),
+          userId: transaction.user_id
+        });
+      } catch (err) {
+        console.error('Error guardando patrón de reporte:', err);
+      }
+    }
+
     const result = transaction.toJSON();
     res.json({ ...result, id: result._id });
   } catch (error) {

@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Calendar, CreditCard, FileText, FolderTree } from 'lucide-react';
+import { X, Calendar, CreditCard, FileText, FolderTree, Sparkles } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Transaction, Tag, CustomCategory } from '../../types';
 import * as mongoApi from '../../lib/mongoApi';
+import { getStoredUser } from '../../lib/auth';
 import { buildCategoryHierarchy } from '../../utils/categories';
 import { NewCategoryModal } from './NewCategoryModal';
 
@@ -31,6 +32,9 @@ export function ReportTransactionModal({
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestionError, setSuggestionError] = useState('');
+  const [reasoning, setReasoning] = useState('');
   
   // Estado para controlar el modal de nueva categoría
   const [showNewCategoryModal, setShowNewCategoryModal] = useState(false);
@@ -41,7 +45,29 @@ export function ReportTransactionModal({
     setSelectedTags([]);
     setComment('');
     setShowNewCategoryModal(false);
+    setSuggestionError('');
+    setReasoning('');
   }, [transaction]);
+
+  // Obtener sugerencia RAG al abrir el modal
+  useEffect(() => {
+    if (!isOpen || !transaction) return;
+    const user = getStoredUser();
+    if (!user?.id) return;
+
+    setSuggesting(true);
+    setSuggestionError('');
+    mongoApi.suggestReport(transaction.id, user.id)
+      .then((suggestion) => {
+        if (suggestion.category_id) setSelectedCategory(suggestion.category_id);
+        if (suggestion.comment) setComment(suggestion.comment);
+        if (suggestion.reasoning) setReasoning(suggestion.reasoning);
+      })
+      .catch((err) => {
+        setSuggestionError(err instanceof Error ? err.message : 'No se pudo obtener sugerencia');
+      })
+      .finally(() => setSuggesting(false));
+  }, [isOpen, transaction?.id]);
 
   const categoryHierarchy = useMemo(() => buildCategoryHierarchy(categories), [categories]);
 
@@ -161,6 +187,26 @@ export function ReportTransactionModal({
                     </div>
                   </div>
 
+                  {suggesting && (
+                    <div className="mb-4 flex items-center gap-2 rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-300">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
+                      Obteniendo sugerencia...
+                    </div>
+                  )}
+
+                  {suggestionError && !suggesting && (
+                    <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+                      {suggestionError}. Puedes completar manualmente.
+                    </div>
+                  )}
+
+                  {reasoning && !suggesting && (
+                    <div className="mb-4 flex gap-2 rounded-lg border border-gray-600 bg-gray-800/50 px-4 py-3 text-sm text-gray-300">
+                      <Sparkles className="h-4 w-4 flex-shrink-0 text-blue-400" />
+                      <span>{reasoning}</span>
+                    </div>
+                  )}
+
                   <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
                       <label htmlFor="category" className="block text-sm font-medium text-gray-300 mb-1">
@@ -219,10 +265,10 @@ export function ReportTransactionModal({
                       </button>
                       <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || suggesting}
                         className="inline-flex w-full items-center justify-center rounded-lg border border-transparent bg-blue-600 px-8 py-2 text-base font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 sm:w-auto sm:text-sm"
                       >
-                        {loading ? (
+                        {loading || suggesting ? (
                           <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
                         ) : (
                           'Guardar'

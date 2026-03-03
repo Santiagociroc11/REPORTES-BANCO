@@ -91,6 +91,16 @@ export async function setTransactionTags(transactionId: string, tagIds: string[]
   });
 }
 
+export async function suggestReport(transactionId: string, userId: string) {
+  return fetchApi<{ category_id: string; comment: string; reasoning: string }>(
+    '/transactions/suggest-report',
+    {
+      method: 'POST',
+      body: JSON.stringify({ transaction_id: transactionId, user_id: userId }),
+    }
+  );
+}
+
 // Categories
 export async function getCategories(userId: string) {
   return fetchApi(`/categories?user_id=${encodeURIComponent(userId)}`);
