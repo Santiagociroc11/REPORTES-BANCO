@@ -16,7 +16,8 @@
     "migrate:clear": "node scripts/migrate-supabase-to-mongo.js --clear",
     "seed-report-patterns": "node scripts/seed-report-patterns.js",
     "review-categories": "node scripts/review-categories.js",
-    "test-extract": "node scripts/test-extract-components.js"
+    "test-extract": "node scripts/test-extract-components.js",
+    "query-by-date": "node scripts/query-transactions-by-date.js"
   },
   "dependencies": {
     "date-fns": "^3.3.1",
