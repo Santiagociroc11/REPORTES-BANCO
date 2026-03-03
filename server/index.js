@@ -17,8 +17,10 @@ import tagsRoutes from './routes/tags.js';
 import telegramConfigRoutes from './routes/telegramConfig.js';
 
 let MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/reportes-banco';
-if (!MONGODB_URI.includes('/reportes-banco')) {
-  MONGODB_URI = MONGODB_URI.includes('?') ? MONGODB_URI.replace('?', '/reportes-banco?') : MONGODB_URI + '/reportes-banco';
+if (!MONGODB_URI.includes('reportes-banco')) {
+  MONGODB_URI = MONGODB_URI.includes('?')
+    ? MONGODB_URI.replace('/?', '/reportes-banco?')
+    : MONGODB_URI + (MONGODB_URI.endsWith('/') ? '' : '/') + 'reportes-banco';
 }
 const PORT = process.env.PORT || 3000;
 
