@@ -1,75 +1,78 @@
 import { ReportPattern } from '../models/ReportPattern.js';
 import { Category } from '../models/Category.js';
+import { extractComponents } from './extractComponentsService.js';
 
 const TOP_K = 10;
-
-const STOP_WORDS = new Set([
-  'en', 'con', 'de', 'la', 'el', 'a', 'por', 'al', 'del', 'los', 'las', 'un', 'una', 'su', 'sus',
-  'compra', 'pago', 'transferencia', 'programado', 'manual', 'tarjeta', 'tdeb', 't.deb', 'debit', 'credito',
-  'desde', 'hacia', 'cuenta', 'bancolombia', 'nequi', 'daviplata', 'pse', 'factura'
-]);
 
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
- * Extrae palabras distintivas (excluye stop words y números de tarjeta comunes).
- */
-function getDistinctiveWords(description) {
-  const words = description.split(/\s+/).filter((w) => w.length >= 2);
-  return words.filter((w) => {
-    const lower = w.toLowerCase();
-    if (STOP_WORDS.has(lower)) return false;
-    if (/^\d{4}$/.test(w)) return false;
-    if (/^\d+[,.]?\d*$/.test(w)) return false;
-    return true;
-  });
-}
-
-/**
- * Búsqueda local: prioriza palabras distintivas (comercio, marca) y usa $and para coincidencias más precisas.
+ * Búsqueda en historial usando componentes extraídos por IA.
+ * Retorna { patterns, fromFallback, components }. Si fromFallback=true, no sugerir.
  */
 async function findSimilarPatterns({ transaction, userId }) {
   const baseFilter = { user_id: userId, transaction_type: transaction.transaction_type };
-  const distinctive = getDistinctiveWords(transaction.description);
+  let searchTerms = [];
+  let components = null;
 
-  if (distinctive.length >= 2) {
-    const andConditions = distinctive.slice(0, 5).map((w) => {
-      const re = new RegExp(escapeRegex(w), 'i');
+  try {
+    const { merchant, searchTerms: terms } = await extractComponents(
+      transaction.description,
+      transaction.transaction_type
+    );
+    searchTerms = terms;
+    if (merchant && !terms.includes(merchant.toLowerCase())) {
+      searchTerms = [merchant.toLowerCase(), ...terms];
+    }
+    components = { merchant, searchTerms: [...searchTerms] };
+  } catch (err) {
+    console.error('extractComponents error:', err.message);
+    return {
+      patterns: await ReportPattern.find(baseFilter).limit(TOP_K).sort({ createdAt: -1 }).lean(),
+      fromFallback: true,
+      components: null
+    };
+  }
+
+  if (searchTerms.length >= 2) {
+    const andConditions = searchTerms.slice(0, 3).map((term) => {
+      const re = new RegExp(escapeRegex(term), 'i');
       return { $or: [{ description: re }, { category_name: re }] };
     });
 
-    let patterns = await ReportPattern.find({ ...baseFilter, $and: andConditions })
+    const patterns = await ReportPattern.find({ ...baseFilter, $and: andConditions })
       .limit(TOP_K)
       .sort({ createdAt: -1 })
       .lean();
 
-    if (patterns.length > 0) return patterns;
+    if (patterns.length > 0) return { patterns, fromFallback: false, components };
   }
 
-  if (distinctive.length >= 1) {
-    const orConditions = distinctive.slice(0, 4).flatMap((w) => {
-      const re = new RegExp(escapeRegex(w), 'i');
+  if (searchTerms.length >= 1) {
+    const orConditions = searchTerms.slice(0, 3).flatMap((term) => {
+      const re = new RegExp(escapeRegex(term), 'i');
       return [{ description: re }, { category_name: re }];
     });
 
-    let patterns = await ReportPattern.find({ ...baseFilter, $or: orConditions })
+    const patterns = await ReportPattern.find({ ...baseFilter, $or: orConditions })
       .limit(TOP_K)
       .sort({ createdAt: -1 })
       .lean();
 
-    if (patterns.length > 0) return patterns;
+    if (patterns.length > 0) return { patterns, fromFallback: false, components };
   }
 
-  return ReportPattern.find(baseFilter).limit(TOP_K).sort({ createdAt: -1 }).lean();
+  const fallback = await ReportPattern.find(baseFilter).limit(TOP_K).sort({ createdAt: -1 }).lean();
+  return { patterns: fallback, fromFallback: true, components };
 }
 
 /**
- * Sugerencia basada 100% en historial: voto por mayoría.
- * Sin IA: usa la categoría y comentario más frecuentes en patrones similares.
+ * Sugerencia basada en historial: voto por mayoría.
+ * reasoning incluye componentes extraídos por IA cuando están disponibles.
  */
-function suggestFromPatterns(patterns, categories) {
+function suggestFromPatterns(patterns, categories, components = null) {
   if (patterns.length === 0) return null;
 
   const catCount = new Map();
@@ -104,18 +107,43 @@ function suggestFromPatterns(patterns, categories) {
   const categoryId = valid ? bestCat : (categories[0]?._id ?? null);
   const catName = categories.find((c) => String(c._id) === categoryId)?.name || '';
 
+  let reasoning;
+  if (components?.merchant || components?.searchTerms?.length) {
+    const parts = [];
+    if (components.merchant) parts.push(`comercio "${components.merchant}"`);
+    if (components.searchTerms?.length) parts.push(`términos: ${components.searchTerms.join(', ')}`);
+    reasoning = `Identificamos: ${parts.join('; ')}. Encontramos ${patterns.length} reporte(s) similar(es); categoría "${catName}" usada ${maxCount} vez/veces.`;
+  } else {
+    reasoning = `Basado en ${patterns.length} reporte(s) similar(es): categoría "${catName}" usada ${maxCount} vez/veces.`;
+  }
+
   return {
     category_id: categoryId,
     comment: bestComment.trim(),
-    reasoning: `Basado en ${patterns.length} reporte(s) similar(es): categoría "${catName}" usada ${maxCount} vez/veces.`
+    reasoning
   };
 }
 
 export async function suggestReport({ transaction, userId }) {
-  const patterns = await findSimilarPatterns({ transaction, userId });
+  const { patterns, fromFallback, components } = await findSimilarPatterns({ transaction, userId });
   const categories = await Category.find({ user_id: userId }).lean();
 
-  const fromHistory = suggestFromPatterns(patterns, categories);
+  if (fromFallback) {
+    let reasoning = 'Sin transacciones similares en el historial. Selecciona manualmente.';
+    if (components?.merchant || components?.searchTerms?.length) {
+      const parts = [];
+      if (components.merchant) parts.push(`comercio "${components.merchant}"`);
+      if (components.searchTerms?.length) parts.push(`términos: ${components.searchTerms.join(', ')}`);
+      reasoning = `Identificamos: ${parts.join('; ')}. No hay reportes similares en tu historial. Selecciona manualmente.`;
+    }
+    return {
+      category_id: null,
+      comment: '',
+      reasoning
+    };
+  }
+
+  const fromHistory = suggestFromPatterns(patterns, categories, components);
   if (fromHistory) {
     return fromHistory;
   }

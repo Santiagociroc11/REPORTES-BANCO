@@ -14,7 +14,9 @@
     "migrate": "node scripts/migrate-supabase-to-mongo.js",
     "migrate:dry": "node scripts/migrate-supabase-to-mongo.js --dry-run",
     "migrate:clear": "node scripts/migrate-supabase-to-mongo.js --clear",
-    "seed-report-patterns": "node scripts/seed-report-patterns.js"
+    "seed-report-patterns": "node scripts/seed-report-patterns.js",
+    "review-categories": "node scripts/review-categories.js",
+    "test-extract": "node scripts/test-extract-components.js"
   },
   "dependencies": {
     "date-fns": "^3.3.1",

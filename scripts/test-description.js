@@ -26,7 +26,8 @@ uri = uri.replace(/(?<!:)\/\//g, '/');
 const STOP_WORDS = new Set([
   'en', 'con', 'de', 'la', 'el', 'a', 'por', 'al', 'del', 'los', 'las', 'un', 'una', 'su', 'sus',
   'compra', 'pago', 'transferencia', 'programado', 'manual', 'tarjeta', 'tdeb', 't.deb', 'debit', 'credito',
-  'desde', 'hacia', 'cuenta', 'bancolombia', 'nequi', 'daviplata', 'pse', 'factura'
+  'desde', 'hacia', 'cuenta', 'bancolombia', 'nequi', 'daviplata', 'pse', 'factura',
+  'santa', 'san', 'mart', 'buena', 'vista', 'norte', 'sur', 'centro', 'plaza', 'carrera', 'calle', 'av'
 ]);
 
 function escapeRegex(str) {
@@ -74,11 +75,13 @@ async function main() {
     console.log(`Patrones del tipo "${transaction_type}"${userId ? ` (user: ${userId})` : ''}:`, totalTipo);
     console.log('');
 
-    if (distinctive.length > 0) {
+    const sorted = [...distinctive].sort((a, b) => b.length - a.length);
+
+    if (sorted.length > 0) {
       let patterns = [];
 
-      if (distinctive.length >= 2) {
-        const andConditions = distinctive.slice(0, 5).map((w) => {
+      if (sorted.length >= 2) {
+        const andConditions = sorted.slice(0, 3).map((w) => {
           const re = new RegExp(escapeRegex(w), 'i');
           return { $or: [{ description: re }, { category_name: re }] };
         });
@@ -86,8 +89,8 @@ async function main() {
         if (patterns.length > 0) console.log('(búsqueda $and - todas las palabras distintivas)');
       }
 
-      if (patterns.length === 0 && distinctive.length >= 1) {
-        const orConditions = distinctive.slice(0, 4).flatMap((w) => {
+      if (patterns.length === 0 && sorted.length >= 1) {
+        const orConditions = sorted.slice(0, 2).flatMap((w) => {
           const re = new RegExp(escapeRegex(w), 'i');
           return [{ description: re }, { category_name: re }];
         });
