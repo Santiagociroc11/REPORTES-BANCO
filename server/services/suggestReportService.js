@@ -9,103 +9,104 @@ function escapeRegex(str) {
 
 /**
  * Búsqueda local por regex (sin embeddings).
- * Extrae palabras de la transacción y busca patrones que coincidan en description, transaction_type o category_name.
+ * Prioriza el mismo tipo de transacción y busca por palabras en description/category_name.
  */
-function findSimilarPatterns({ transaction, userId }) {
-  const searchText = `${transaction.description} ${transaction.transaction_type} ${String(transaction.amount)}`;
+async function findSimilarPatterns({ transaction, userId }) {
+  const baseFilter = { user_id: userId, transaction_type: transaction.transaction_type };
+  const searchText = `${transaction.description} ${String(transaction.amount)}`;
   const words = searchText.split(/\s+/).filter((w) => w.length > 1);
 
   if (words.length === 0) {
-    return ReportPattern.find({ user_id: userId }).limit(TOP_K).sort({ createdAt: -1 }).lean();
+    return ReportPattern.find(baseFilter).limit(TOP_K).sort({ createdAt: -1 }).lean();
   }
 
   const orConditions = words.flatMap((w) => {
     const re = new RegExp(escapeRegex(w), 'i');
-    return [
-      { description: re },
-      { transaction_type: re },
-      { category_name: re }
-    ];
+    return [{ description: re }, { category_name: re }];
   });
 
-  return ReportPattern.find({ user_id: userId, $or: orConditions })
+  const patterns = await ReportPattern.find({ ...baseFilter, $or: orConditions })
     .limit(TOP_K)
     .sort({ createdAt: -1 })
     .lean();
+
+  if (patterns.length < TOP_K) {
+    const ids = new Set(patterns.map((p) => p._id.toString()));
+    const extra = await ReportPattern.find(baseFilter)
+      .limit(TOP_K - patterns.length)
+      .sort({ createdAt: -1 })
+      .lean();
+    const combined = [...patterns];
+    for (const p of extra) {
+      if (!ids.has(p._id.toString())) combined.push(p);
+    }
+    return combined.slice(0, TOP_K);
+  }
+  return patterns;
+}
+
+/**
+ * Sugerencia basada 100% en historial: voto por mayoría.
+ * Sin IA: usa la categoría y comentario más frecuentes en patrones similares.
+ */
+function suggestFromPatterns(patterns, categories) {
+  if (patterns.length === 0) return null;
+
+  const catCount = new Map();
+  const commentByCat = new Map();
+  for (const p of patterns) {
+    const cid = String(p.category_id || '');
+    if (!cid) continue;
+    catCount.set(cid, (catCount.get(cid) || 0) + 1);
+    const key = `${cid}::${(p.comment || '').trim()}`;
+    commentByCat.set(key, (commentByCat.get(key) || 0) + 1);
+  }
+
+  let bestCat = '';
+  let maxCount = 0;
+  for (const [cid, n] of catCount) {
+    if (n > maxCount) {
+      maxCount = n;
+      bestCat = cid;
+    }
+  }
+
+  let bestComment = '';
+  let maxComment = 0;
+  for (const [key, n] of commentByCat) {
+    if (key.startsWith(bestCat + '::') && n > maxComment) {
+      maxComment = n;
+      bestComment = key.replace(bestCat + '::', '');
+    }
+  }
+
+  const valid = categories.some((c) => String(c._id) === bestCat);
+  const categoryId = valid ? bestCat : (categories[0]?._id ?? null);
+  const catName = categories.find((c) => String(c._id) === categoryId)?.name || '';
+
+  return {
+    category_id: categoryId,
+    comment: bestComment.trim(),
+    reasoning: `Basado en ${patterns.length} reporte(s) similar(es): categoría "${catName}" usada ${maxCount} vez/veces.`
+  };
 }
 
 export async function suggestReport({ transaction, userId }) {
   const patterns = await findSimilarPatterns({ transaction, userId });
-
   const categories = await Category.find({ user_id: userId }).lean();
 
-  const examplesText = patterns
-    .map(
-      (p) =>
-        `- "${p.description}" (${p.transaction_type}, ${p.amount}) → categoría: ${p.category_name}, comentario: ${p.comment || '(ninguno)'}`
-    )
-    .join('\n');
-
-  const categoriesText = categories
-    .map((c) => `- ${c._id}: ${c.name}`)
-    .join('\n');
-
-  const prompt = `Eres un asistente que sugiere categorías y comentarios para reportar transacciones bancarias.
-
-Transacción actual:
-- Descripción: ${transaction.description}
-- Tipo: ${transaction.transaction_type}
-- Monto: ${transaction.amount}
-
-Categorías disponibles del usuario (id: nombre):
-${categoriesText}
-
-${patterns.length > 0 ? `Ejemplos de reportes similares del usuario:\n${examplesText}` : 'No hay reportes previos similares.'}
-
-Responde ÚNICAMENTE con un JSON válido, sin markdown ni texto adicional:
-{"category_id": "id_de_categoria", "comment": "comentario breve opcional", "reasoning": "explicación corta en español"}
-
-Si no hay categorías o no puedes decidir, usa la primera categoría disponible y reasoning explicando la incertidumbre.`;
-
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`
-    },
-    body: JSON.stringify({
-      model: 'openai/gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3
-    })
-  });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`OpenRouter error: ${response.status} ${err}`);
+  const fromHistory = suggestFromPatterns(patterns, categories);
+  if (fromHistory) {
+    return fromHistory;
   }
 
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content?.trim();
-  if (!content) {
-    throw new Error('Respuesta vacía de OpenRouter');
+  if (categories.length === 0) {
+    return { category_id: null, comment: '', reasoning: 'No hay categorías ni historial.' };
   }
-
-  let parsed;
-  try {
-    const jsonStr = content.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
-    parsed = JSON.parse(jsonStr);
-  } catch (e) {
-    throw new Error(`No se pudo parsear la respuesta del LLM: ${content}`);
-  }
-
-  const categoryId = parsed.category_id || (categories[0]?._id ?? null);
-  const validCategory = categories.some((c) => String(c._id) === String(categoryId));
-  const finalCategoryId = validCategory ? categoryId : (categories[0]?._id ?? null);
 
   return {
-    category_id: finalCategoryId,
-    comment: String(parsed.comment || '').trim(),
-    reasoning: String(parsed.reasoning || '').trim()
+    category_id: categories[0]._id,
+    comment: '',
+    reasoning: 'Sin historial de este tipo de transacción. Selecciona manualmente.'
   };
 }
