@@ -223,7 +223,12 @@ export default function Dashboard() {
         );
       case 'reconciliation':
         return (
-          <BankReconciliation transactions={transactions} categories={categories} />
+          <BankReconciliation
+            transactions={transactions}
+            categories={categories}
+            onRefresh={fetchTransactions}
+            onCategoriesChange={handleCategoriesChange}
+          />
         );
     }
   }, [

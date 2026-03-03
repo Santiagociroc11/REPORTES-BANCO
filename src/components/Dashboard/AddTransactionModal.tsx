@@ -8,6 +8,13 @@ import { CustomCategory, Tag as TagType } from '../../types';
 import { buildCategoryHierarchy } from '../../utils/categories';
 import { NewCategoryModal } from './NewCategoryModal';
 
+export interface AddTransactionInitialData {
+  amount: number;
+  description: string;
+  date: string;
+  comment?: string;
+}
+
 interface AddTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -16,6 +23,7 @@ interface AddTransactionModalProps {
   tags?: TagType[];
   refreshCategories?: () => void;
   refreshTags?: () => void;
+  initialData?: AddTransactionInitialData;
 }
 
 const TRANSACTION_TYPES = [
@@ -39,7 +47,8 @@ export function AddTransactionModal({
   categories = [],
   tags = [],
   refreshCategories,
-  refreshTags
+  refreshTags,
+  initialData
 }: AddTransactionModalProps) {
   // Estados del formulario
   const [formData, setFormData] = useState({
@@ -60,25 +69,39 @@ export function AddTransactionModal({
   const [showNewCategoryModal, setShowNewCategoryModal] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  // Resetear formulario cuando se abre/cierra el modal
+  // Resetear formulario cuando se abre/cierra el modal (o prellenar con initialData)
   useEffect(() => {
     if (isOpen) {
-      setFormData({
-        amount: '',
-        description: '',
-        category: '',
-        type: 'gasto',
-        transactionType: 'gasto manual',
-        comment: '',
-        date: format(new Date(), 'yyyy-MM-dd'),
-        time: format(new Date(), 'HH:mm'),
-        banco: 'Bancolombia'
-      });
+      if (initialData) {
+        setFormData({
+          amount: String(initialData.amount),
+          description: initialData.description,
+          category: '',
+          type: 'gasto',
+          transactionType: 'gasto manual',
+          comment: initialData.comment || '',
+          date: initialData.date,
+          time: '12:00',
+          banco: 'Bancolombia'
+        });
+      } else {
+        setFormData({
+          amount: '',
+          description: '',
+          category: '',
+          type: 'gasto',
+          transactionType: 'gasto manual',
+          comment: '',
+          date: format(new Date(), 'yyyy-MM-dd'),
+          time: format(new Date(), 'HH:mm'),
+          banco: 'Bancolombia'
+        });
+      }
       setSelectedTags([]);
       setError('');
       setValidationErrors({});
     }
-  }, [isOpen]);
+  }, [isOpen, initialData]);
 
   // Jerarquía de categorías
   const categoryHierarchy = useMemo(() => buildCategoryHierarchy(categories), [categories]);

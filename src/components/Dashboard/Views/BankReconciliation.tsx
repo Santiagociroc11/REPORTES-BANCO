@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { FileSpreadsheet, CheckCircle2, AlertCircle, Calendar, CreditCard, Search } from 'lucide-react';
+import { toast } from 'react-toastify';
+import { FileSpreadsheet, CheckCircle2, AlertCircle, Plus } from 'lucide-react';
 import { format, parse } from 'date-fns';
 import { Transaction, CustomCategory } from '../../../types';
+import { AddTransactionModal, AddTransactionInitialData } from '../AddTransactionModal';
 
 interface BankEntry {
   fecha: string;
@@ -14,6 +16,8 @@ interface BankEntry {
 interface BankReconciliationProps {
   transactions: Transaction[];
   categories: CustomCategory[];
+  onRefresh?: () => void;
+  onCategoriesChange?: () => void;
 }
 
 const DATE_PATTERN = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
@@ -57,9 +61,10 @@ function parseBankStatement(text: string): BankEntry[] {
   return entries;
 }
 
-export function BankReconciliation({ transactions, categories }: BankReconciliationProps) {
+export function BankReconciliation({ transactions, categories, onRefresh, onCategoriesChange }: BankReconciliationProps) {
   const [bankText, setBankText] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'matched' | 'unmatched'>('all');
+  const [addModalEntry, setAddModalEntry] = useState<BankEntry | null>(null);
 
   const bankEntries = useMemo(() => parseBankStatement(bankText), [bankText]);
 
@@ -191,6 +196,7 @@ export function BankReconciliation({ transactions, categories }: BankReconciliat
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Descripción (Banco)</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase">Valor</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">En sistema</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase w-24">Acción</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700">
@@ -222,6 +228,18 @@ export function BankReconciliation({ transactions, categories }: BankReconciliat
                           <span className="text-amber-400">No encontrado</span>
                         )}
                       </td>
+                      <td className="px-4 py-2 text-right">
+                        {!r.matched && (
+                          <button
+                            onClick={() => setAddModalEntry(r.entry)}
+                            className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors"
+                            title="Agregar al sistema"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Agregar
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -230,6 +248,24 @@ export function BankReconciliation({ transactions, categories }: BankReconciliat
           </div>
         </>
       )}
+
+      <AddTransactionModal
+        isOpen={!!addModalEntry}
+        onClose={() => setAddModalEntry(null)}
+        onSuccess={() => {
+          setAddModalEntry(null);
+          onRefresh?.();
+          toast.success('Transacción agregada. La conciliación se actualizará.');
+        }}
+        categories={categories}
+        refreshCategories={onCategoriesChange}
+        initialData={addModalEntry ? {
+          amount: addModalEntry.valor,
+          description: addModalEntry.descripcion || 'Sin descripción',
+          date: addModalEntry.fecha,
+          comment: addModalEntry.referencia ? `Ref: ${addModalEntry.referencia}` : undefined
+        } : undefined}
+      />
     </div>
   );
 }
