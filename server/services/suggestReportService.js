@@ -18,15 +18,20 @@ async function findSimilarPatterns({ transaction, userId }) {
   let components = null;
 
   try {
-    const { merchant, searchTerms: terms } = await extractComponents(
+    const { destinationAccount, merchant, searchTerms: terms } = await extractComponents(
       transaction.description,
       transaction.transaction_type
     );
-    searchTerms = terms;
-    if (merchant && !terms.includes(merchant.toLowerCase())) {
-      searchTerms = [merchant.toLowerCase(), ...terms];
+    if (destinationAccount) {
+      searchTerms = [destinationAccount];
+      components = { destinationAccount, merchant: '', searchTerms: [...searchTerms] };
+    } else {
+      searchTerms = [...terms];
+      if (merchant && !terms.includes(merchant.toLowerCase())) {
+        searchTerms = [merchant.toLowerCase(), ...terms];
+      }
+      components = { destinationAccount: '', merchant, searchTerms: [...searchTerms] };
     }
-    components = { merchant, searchTerms: [...searchTerms] };
   } catch (err) {
     console.error('extractComponents error:', err.message);
     return {
@@ -116,7 +121,9 @@ function suggestFromPatterns(patterns, categories, components = null) {
     });
 
   let reasoning;
-  if (components?.merchant || components?.searchTerms?.length) {
+  if (components?.destinationAccount) {
+    reasoning = `Identificamos cuenta destino "${components.destinationAccount}". Encontramos ${patterns.length} reporte(s) con la misma cuenta; categoría "${catName}" usada ${maxCount} vez/veces.`;
+  } else if (components?.merchant || components?.searchTerms?.length) {
     const parts = [];
     if (components.merchant) parts.push(`comercio "${components.merchant}"`);
     if (components.searchTerms?.length) parts.push(`términos: ${components.searchTerms.join(', ')}`);
@@ -201,7 +208,9 @@ export async function suggestReport({ transaction, userId }) {
 
   if (fromFallback) {
     let reasoning = 'Sin transacciones similares en el historial. Selecciona manualmente.';
-    if (components?.merchant || components?.searchTerms?.length) {
+    if (components?.destinationAccount) {
+      reasoning = `Identificamos cuenta destino "${components.destinationAccount}". No hay reportes con esa cuenta en tu historial. Selecciona manualmente.`;
+    } else if (components?.merchant || components?.searchTerms?.length) {
       const parts = [];
       if (components.merchant) parts.push(`comercio "${components.merchant}"`);
       if (components.searchTerms?.length) parts.push(`términos: ${components.searchTerms.join(', ')}`);
