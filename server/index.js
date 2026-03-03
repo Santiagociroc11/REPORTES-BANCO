@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, '../.env') });
 
+import { logger } from './utils/logger.js';
 import authRoutes from './routes/auth.js';
 import usersRoutes from './routes/users.js';
 import transactionsRoutes from './routes/transactions.js';
@@ -21,15 +22,19 @@ if (!MONGODB_URI.includes('/reportes-banco')) {
 }
 const PORT = process.env.PORT || 3000;
 
-console.log('[Server] Iniciando...');
-console.log('[Server] Puerto:', PORT);
-console.log('[Server] MongoDB:', MONGODB_URI.replace(/:[^:@]+@/, ':****@') || 'no configurado');
-console.log('[Server] Conectando a MongoDB...');
+logger.info('[Server] Iniciando...');
+logger.info('[Server] Puerto:', PORT);
+logger.info('[Server] MongoDB:', MONGODB_URI.replace(/:[^:@]+@/, ':****@') || 'no configurado');
+logger.info('[Server] Conectando a MongoDB...');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use((req, res, next) => {
+  res.on('finish', () => logger.info(req.method, req.path, res.statusCode));
+  next();
+});
 
 // API
 app.use('/api/auth', authRoutes);
@@ -48,13 +53,13 @@ app.get('*', (_, res) => {
 
 mongoose.connect(MONGODB_URI)
   .then(() => {
-    console.log('[Server] ✓ Conectado a MongoDB');
+    logger.info('[Server] ✓ Conectado a MongoDB');
     app.listen(PORT, () => {
-      console.log('[Server] ✓ Servidor listo en http://localhost:' + PORT);
-      console.log('[Server] API: /api/auth, /api/transactions, /api/categories, etc.');
+      logger.info('[Server] ✓ Servidor listo en http://localhost:' + PORT);
+      logger.info('[Server] API: /api/auth, /api/transactions, /api/categories, etc.');
     });
   })
   .catch((err) => {
-    console.error('[Server] ✗ Error conectando a MongoDB:', err.message);
+    logger.error('[Server] ✗ Error conectando a MongoDB:', err.message);
     process.exit(1);
   });
