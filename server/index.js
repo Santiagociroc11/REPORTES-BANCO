@@ -11,6 +11,7 @@ dotenv.config({ path: join(__dirname, '../.env') });
 import { logger } from './utils/logger.js';
 import authRoutes from './routes/auth.js';
 import usersRoutes from './routes/users.js';
+import transactionsFromNotification from './routes/transactionsFromNotification.js';
 import transactionsRoutes from './routes/transactions.js';
 import categoriesRoutes from './routes/categories.js';
 import tagsRoutes from './routes/tags.js';
@@ -39,9 +40,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// API
+// API (ruta específica antes del router genérico)
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/transactions/from-notification', transactionsFromNotification);
 app.use('/api/transactions', transactionsRoutes);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/tags', tagsRoutes);

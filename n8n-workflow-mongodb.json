@@ -1,0 +1,265 @@
+{
+  "name": "Transacciones Bancolombia (MongoDB)",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "includeSpamTrash": true,
+          "labelIds": [
+            "Label_5009391565458069770"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [-864, -336],
+      "id": "473dfcf8-0cb3-44f0-8155-24b28d2eb69b",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "DOPWTzPin0EZKjQY",
+          "name": "GMAIL SANTIAGO"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8a09502d-cbfd-437a-ae53-96089ceb6cc4",
+              "name": "correo",
+              "value": "={{ $json.snippet }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-656, -336],
+      "id": "ffc2b0b7-55a0-4bd9-be24-74320b63dd9a",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://auto-finanzas.automscc.com/api/transactions/from-notification",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ amount: $json.output.amount, description: $json.output.description, transaction_date: $json.output.transaction_date, transaction_type: $json.output.transaction_type, type: $json.output.type, notification_email: $('Gmail Trigger').item.json.To, banco: $json.output.banco || 'bancolombia' }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [224, -224],
+      "id": "7a6b257e-7184-4e16-9edb-5063633cd014",
+      "name": "API MongoDB"
+    },
+    {
+      "parameters": {
+        "chatId": "552780004",
+        "text": "=⚡ *NUEVO MOVIMIENTO DETECTADO EN: {{ $json.output.banco.toUpperCase() }}*\n\nSe acaba de registrar un nuevo movimiento con estos datos:\n\n*VALOR*: ${{ $json.output.amount.format() }}\n*DESCRIPCIÓN*: {{ $json.output.description }}\n*TIPO*: {{ $json.output.transaction_type }}\n*FECHA*: {{ $json.output.transaction_date.toDateTime().format('yyyy-MM-dd hh:mm a') }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "REPORTAR TRANSACCIÓN",
+                    "additionalFields": {
+                      "url": "https://auto-finanzas.automscc.com/"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [224, -416],
+      "id": "ed45b8da-f16b-4291-a114-8d943ab3d24d",
+      "name": "Telegram",
+      "webhookId": "709cc4b4-8ba5-428c-8b5d-0b00c99b23d5",
+      "credentials": {
+        "telegramApi": {
+          "id": "D5fwEGb7XJShZzzS",
+          "name": "BOT FINANZAS"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.correo }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "transaction_type",
+              "description": "=sigue estas instrucciones:\n\n\"if (email.includes(\"Transferiste\")) {\n  transactionType = \"transferencia\";\n  description = `Transferencia desde ${cuentaOrigen} a ${cuentaDestino}`;\n} else if (email.includes(\"Compraste\")) {\n  transactionType = \"compra con tarjeta\";\n  description = `Compra en ${empresa} con tarjeta ${cuentaOrigen}`;\n} else if (email.includes(\"Pagaste\")) {\n  transactionType = \"pago por pse\";\n  description = `Pago por PSE a ${bancoDestino} desde ${cuentaOrigen}`;\n} else if (email.includes(\"Factura Programada\")) {\n  transactionType = \"pago programado\";\n  description = `Pago programado de ${factura} desde ${cuentaOrigen}`;\n}\"\n\npara determinar el tipo de transaccion",
+              "required": true
+            },
+            {
+              "name": "amount",
+              "type": "number",
+              "description": "el monto de la transaccion en formato plano, ejemplo: 15700",
+              "required": true
+            },
+            {
+              "name": "description",
+              "description": "descripcion de la transacción quitando cualquier caracter especial como asteriscos o cualquier otro",
+              "required": true
+            },
+            {
+              "name": "transaction_date",
+              "description": "=fecha en este formato: \"2025-03-22 13:25:00-05\"",
+              "required": true
+            },
+            {
+              "name": "type",
+              "description": "especificar en \"gasto\"",
+              "required": true
+            },
+            {
+              "name": "banco",
+              "description": "que banco reporta en minuscula",
+              "required": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1,
+      "position": [-224, -320],
+      "id": "93988b04-2a97-4d15-88cf-deedc6126ddd",
+      "name": "Information Extractor"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [-240, -160],
+      "id": "6f457512-68af-4389-a7d1-2072d513294d",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "nZ98FVO8dD6bJnEc",
+          "name": "GPT SANTIAGO"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a450213d-34b2-49de-a798-3e2a2dced55c",
+              "leftValue": "={{ $json.correo.toLowerCase() }}",
+              "rightValue": "/recibiste/",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "0b178cc6-9749-4007-8065-e5753b5665bb",
+              "leftValue": "={{ $json.correo.toLowerCase() }}",
+              "rightValue": "/\\$/",
+              "operator": {
+                "type": "string",
+                "operation": "notRegex"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-464, -336],
+      "id": "9ffedd0c-58b2-460c-bfb1-8d8279ee5915",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "2wKiwBmcWpDiT4bB",
+          "mode": "list",
+          "cachedResultName": "CORREOS TRANSFERENCIAS MAGIS"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [-192, -544],
+      "id": "b2bc0637-1efb-438e-9e49-f524cc7eb85d",
+      "name": "Execute Workflow"
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [[{ "node": "Edit Fields1", "type": "main", "index": 0 }]]
+    },
+    "Edit Fields1": {
+      "main": [[{ "node": "If", "type": "main", "index": 0 }]]
+    },
+    "Information Extractor": {
+      "main": [
+        [
+          { "node": "API MongoDB", "type": "main", "index": 0 },
+          { "node": "Telegram", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [[{ "node": "Information Extractor", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "If": {
+      "main": [
+        [{ "node": "Execute Workflow", "type": "main", "index": 0 }],
+        [{ "node": "Information Extractor", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
