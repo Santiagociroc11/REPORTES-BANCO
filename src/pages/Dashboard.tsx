@@ -11,7 +11,7 @@ import { AddTransactionButton } from '../components/Dashboard/AddTransactionButt
 import { TransactionList } from '../components/Dashboard/TransactionList';
 import { UserSettings } from '../components/Dashboard/Views/UserSettings';
 import { TotalTable } from '../components/Dashboard/Views/TotalTable';
-import { supabase } from '../lib/supabase';
+import * as mongoApi from '../lib/mongoApi';
 import { toast } from 'react-toastify';
 
 export default function Dashboard() {
@@ -30,11 +30,7 @@ export default function Dashboard() {
   const fetchCategories = useCallback(async () => {
     if (!user) return;
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('user_id', user.id);
-      if (error) throw error;
+      const data = await mongoApi.getCategories(user.id);
       setCategories(data || []);
     } catch (error) {
       console.error('Error al cargar categorías:', error);
@@ -45,19 +41,7 @@ export default function Dashboard() {
   const fetchTransactions = useCallback(async () => {
     if (!user) return;
     try {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select(`
-          *,
-          categories (
-            id,
-            name,
-            parent_id
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('transaction_date', { ascending: false });
-      if (error) throw error;
+      const data = await mongoApi.getTransactions(user.id);
       setTransactions(data || []);
     } catch (error) {
       console.error('Error al cargar transacciones:', error);
@@ -67,11 +51,7 @@ export default function Dashboard() {
   // Función para eliminar una transacción (ya no se usa confirmación, pues se hace en el modal)
   const handleTransactionDelete = useCallback(async (transaction: Transaction) => {
     try {
-      const { error } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('id', transaction.id);
-      if (error) throw error;
+      await mongoApi.deleteTransaction(transaction.id);
       await fetchTransactions();
       toast.success("Transacción eliminada exitosamente");
     } catch (error) {

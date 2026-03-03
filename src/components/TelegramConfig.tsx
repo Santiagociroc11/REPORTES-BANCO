@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Send, X } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import * as mongoApi from '../lib/mongoApi';
 import { getStoredUser } from '../lib/auth';
 
 interface TelegramConfigProps {
@@ -38,14 +38,8 @@ export function TelegramConfig({ isOpen, onClose }: TelegramConfigProps) {
         return;
       }
 
-      const { data, error } = await supabase
-        .from('telegram_config')
-        .select('*')
-        .eq('user_id', user.id);
+      const data = await mongoApi.getTelegramConfig(user.id);
 
-      if (error) throw error;
-      
-      // If configuration exists, use it
       if (data && data.length > 0) {
         const config = data[0];
         setConfig(config);
@@ -76,18 +70,12 @@ export function TelegramConfig({ isOpen, onClose }: TelegramConfigProps) {
         return;
       }
 
-      const { data, error } = await supabase
-        .from('telegram_config')
-        .upsert({
-          id: config?.id,
-          user_id: user.id,
-          chat_id: chatId,
-          enabled
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      const data = await mongoApi.upsertTelegramConfig({
+        user_id: user.id,
+        chat_id: chatId,
+        enabled,
+        id: config?.id
+      });
       
       setConfig(data);
       onClose();

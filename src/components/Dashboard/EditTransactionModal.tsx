@@ -3,7 +3,7 @@ import { X, Calendar, CreditCard, FileText, FolderTree } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Transaction, CustomCategory } from '../../types';
-import { supabase } from '../../lib/supabase';
+import * as mongoApi from '../../lib/mongoApi';
 import { buildCategoryHierarchy } from '../../utils/categories';
 
 interface EditTransactionModalProps {
@@ -55,17 +55,11 @@ export function EditTransactionModal({
     setLoading(true);
 
     try {
-      // Actualizar la transacción
-      const { error: updateError } = await supabase
-        .from('transactions')
-        .update({
-          category_id: selectedCategory || null,
-          description: description,
-          comment,
-        })
-        .eq('id', transaction.id);
-
-      if (updateError) throw updateError;
+      await mongoApi.updateTransaction(transaction.id, {
+        category_id: selectedCategory || null,
+        description,
+        comment,
+      });
 
       onSuccess();
       onClose();

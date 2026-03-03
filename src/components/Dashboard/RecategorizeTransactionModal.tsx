@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, FolderTree } from 'lucide-react';
 import { es } from 'date-fns/locale';
 import { Transaction, CustomCategory } from '../../types';
-import { supabase } from '../../lib/supabase';
+import * as mongoApi from '../../lib/mongoApi';
 import { buildCategoryHierarchy } from '../../utils/categories';
 import { NewCategoryModal } from './NewCategoryModal';
 
@@ -57,17 +57,10 @@ export function RecategorizeTransactionModal({
     setLoading(true);
 
     try {
-      // Actualizar la transacción con la nueva categoría y comentario.
-      // Como la transacción ya está reportada, no es necesario cambiar el campo "reported"
-      const { error: updateError } = await supabase
-        .from('transactions')
-        .update({
-          category_id: selectedCategory || null,
-          comment,
-        })
-        .eq('id', transaction.id);
-
-      if (updateError) throw updateError;
+      await mongoApi.updateTransaction(transaction.id, {
+        category_id: selectedCategory || null,
+        comment,
+      });
 
       onSuccess();
       onClose();

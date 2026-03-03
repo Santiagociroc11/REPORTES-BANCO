@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Save, X } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import * as mongoApi from '../lib/mongoApi';
 import { useAuth } from '../contexts/AuthContext';
 
 interface EmailConfigProps {
@@ -30,17 +30,11 @@ export function EmailConfig({ isOpen, onClose }: EmailConfigProps) {
         throw new Error('Usuario no autenticado');
       }
 
-      const { data, error } = await supabase
-        .from('users')
-        .select('email, bank_notification_email')
-        .eq('id', user.id)
-        .single();
-
-      if (error) throw error;
+      const data = await mongoApi.getUser(user.id);
       
       if (data) {
-        setEmail(data.email || '');
-        setBankEmail(data.bank_notification_email || '');
+        setEmail((data as { email?: string }).email || '');
+        setBankEmail((data as { bank_notification_email?: string }).bank_notification_email || '');
       }
     } catch (error) {
       console.error('Error al cargar la configuración de correo:', error);
@@ -59,20 +53,18 @@ export function EmailConfig({ isOpen, onClose }: EmailConfigProps) {
         throw new Error('Usuario no autenticado');
       }
 
-      const { error } = await supabase
-        .from('users')
-        .update({
+      try {
+        await mongoApi.updateUser(user.id, {
           email,
           bank_notification_email: bankEmail
-        })
-        .eq('id', user.id);
-
-      if (error) {
-        if (error.code === '23505') {
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '';
+        if (message.includes('ya está registrado')) {
           setError('Este correo de notificaciones bancarias ya está registrado');
           return;
         }
-        throw error;
+        throw err;
       }
       
       onClose();

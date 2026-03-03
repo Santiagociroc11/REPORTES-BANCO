@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, CreditCard, Wallet, Calendar, Clock, DollarSign, FileText, FolderTree, Building2, Tag, Plus, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { supabase } from '../../lib/supabase';
+import * as mongoApi from '../../lib/mongoApi';
 import { getStoredUser } from '../../lib/auth';
 import { CustomCategory, Tag as TagType } from '../../types';
 import { buildCategoryHierarchy } from '../../utils/categories';
@@ -170,39 +170,25 @@ export function AddTransactionModal({
       const transactionDate = new Date(`${formData.date}T${formData.time}`);
 
       // Crear la transacción
-      const { data: transactionData, error: insertError } = await supabase
-        .from('transactions')
-        .insert([{
-          amount: Number(formData.amount),
-          description: formData.description.trim(),
-          transaction_date: transactionDate.toISOString(),
-          category_id: formData.category || null,
-          reported: true,
-          transaction_type: formData.transactionType,
-          type: formData.type,
-          user_id: user.id,
-          comment: formData.comment.trim() || null,
-          banco: formData.banco
-        }])
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
+      const transactionData = await mongoApi.createTransaction({
+        amount: Number(formData.amount),
+        description: formData.description.trim(),
+        transaction_date: transactionDate.toISOString(),
+        category_id: formData.category || null,
+        reported: true,
+        transaction_type: formData.transactionType,
+        type: formData.type,
+        user_id: user.id,
+        comment: formData.comment.trim() || null,
+        banco: formData.banco
+      });
 
       // Asociar tags si hay seleccionados
       if (selectedTags.length > 0 && transactionData) {
-        const tagAssociations = selectedTags.map(tagId => ({
-          transaction_id: transactionData.id,
-          tag_id: tagId
-        }));
-
-        const { error: tagError } = await supabase
-          .from('transaction_tags')
-          .insert(tagAssociations);
-
-        if (tagError) {
+        try {
+          await mongoApi.setTransactionTags(transactionData.id, selectedTags);
+        } catch (tagError) {
           console.error('Error al asociar tags:', tagError);
-          // No lanzamos error aquí para no fallar toda la transacción
         }
       }
 

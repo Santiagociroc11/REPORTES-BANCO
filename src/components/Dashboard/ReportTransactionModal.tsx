@@ -3,7 +3,7 @@ import { X, Calendar, CreditCard, FileText, FolderTree } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Transaction, Tag, CustomCategory } from '../../types';
-import { supabase } from '../../lib/supabase';
+import * as mongoApi from '../../lib/mongoApi';
 import { buildCategoryHierarchy } from '../../utils/categories';
 import { NewCategoryModal } from './NewCategoryModal';
 
@@ -64,38 +64,13 @@ export function ReportTransactionModal({
     setLoading(true);
 
     try {
-      // Actualizar la transacción
-      const { error: updateError } = await supabase
-        .from('transactions')
-        .update({
-          category_id: selectedCategory || null,
-          comment,
-          reported: true
-        })
-        .eq('id', transaction.id);
+      await mongoApi.updateTransaction(transaction.id, {
+        category_id: selectedCategory || null,
+        comment,
+        reported: true
+      });
 
-      if (updateError) throw updateError;
-
-      // Actualizar las etiquetas (si las hay)
-      if (selectedTags.length > 0) {
-        const tagRelations = selectedTags.map((tagId: string) => ({
-          transaction_id: transaction.id,
-          tag_id: tagId
-        }));
-
-        // Primero eliminar las etiquetas existentes
-        await supabase
-          .from('transaction_tags')
-          .delete()
-          .eq('transaction_id', transaction.id);
-
-        // Luego insertar las nuevas
-        const { error: tagError } = await supabase
-          .from('transaction_tags')
-          .insert(tagRelations);
-
-        if (tagError) throw tagError;
-      }
+      await mongoApi.setTransactionTags(transaction.id, selectedTags);
 
       onSuccess();
       onClose();

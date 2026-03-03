@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { X } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import * as mongoApi from '../../lib/mongoApi';
 import { CustomCategory } from '../../types';
 import { buildCategoryHierarchy } from '../../utils/categories';
 import { useAuth } from '../../contexts/AuthContext';
@@ -45,16 +45,11 @@ export function NewCategoryModal({ isOpen, onClose, onCategoryCreated, categorie
     setError('');
     setLoading(true);
     try {
-      const { data, error: insertError } = await supabase
-        .from('categories')
-        .insert({
-          name: newCategoryName.trim(),
-          parent_id: parentCategory || null,
-          user_id: user.id,
-        })
-        .select()
-        .single();
-      if (insertError) throw insertError;
+      const data = await mongoApi.createCategory({
+        name: newCategoryName.trim(),
+        parent_id: parentCategory || null,
+        user_id: user.id,
+      });
       onCategoryCreated(data);
       // Limpiar formulario y cerrar modal
       setNewCategoryName('');

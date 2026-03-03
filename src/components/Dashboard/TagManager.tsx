@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Plus, Tag as TagIcon, X } from 'lucide-react';
 import { Tag } from '../../types';
-import { supabase } from '../../lib/supabase';
+import * as mongoApi from '../../lib/mongoApi';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface TagManagerProps {
   tags: Tag[];
@@ -9,19 +10,17 @@ interface TagManagerProps {
 }
 
 export function TagManager({ tags, onTagsChange }: TagManagerProps) {
+  const { user } = useAuth();
   const [newTagName, setNewTagName] = useState('');
   const [error, setError] = useState('');
 
   const handleAddTag = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (!user) return;
 
     try {
-      const { error: insertError } = await supabase
-        .from('tags')
-        .insert({ name: newTagName });
-
-      if (insertError) throw insertError;
+      await mongoApi.createTag({ name: newTagName, user_id: user.id });
 
       setNewTagName('');
       onTagsChange();
@@ -77,12 +76,7 @@ export function TagManager({ tags, onTagsChange }: TagManagerProps) {
               <button
                 onClick={async () => {
                   try {
-                    const { error } = await supabase
-                      .from('tags')
-                      .delete()
-                      .eq('id', tag.id);
-
-                    if (error) throw error;
+                    await mongoApi.deleteTag(tag.id);
                     onTagsChange();
                   } catch (error) {
                     console.error('Error al eliminar etiqueta:', error);

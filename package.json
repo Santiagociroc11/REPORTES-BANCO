@@ -7,10 +7,14 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "cd server && npm run dev",
+    "server:start": "cd server && npm start",
+    "migrate": "node scripts/migrate-supabase-to-mongo.js",
+    "migrate:dry": "node scripts/migrate-supabase-to-mongo.js --dry-run",
+    "migrate:clear": "node scripts/migrate-supabase-to-mongo.js --clear"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.7",
     "date-fns": "^3.3.1",
     "js-cookie": "^3.0.5",
     "jspdf": "^2.5.1",
@@ -24,6 +28,8 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "dotenv": "^16.4.5",
+    "mongoose": "^8.5.0",
     "@eslint/js": "^9.9.1",
     "@types/js-cookie": "^3.0.6",
     "@types/react": "^18.3.5",

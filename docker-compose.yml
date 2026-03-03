@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/reportes-banco
+      - PORT=3000
+    depends_on:
+      - mongodb
+
+  frontend:
+    build:
+      context: .
+      dockerfile: dockerfile
+      args:
+        VITE_API_URL: http://localhost:3000/api
+    ports:
+      - "4445:4445"
+    depends_on:
+      - server
+
+volumes:
+  mongodb_data:

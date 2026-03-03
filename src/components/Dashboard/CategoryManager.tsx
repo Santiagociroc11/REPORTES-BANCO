@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Plus, FolderTree, X } from 'lucide-react';
 import { CustomCategory } from '../../types';
-import { supabase } from '../../lib/supabase';
+import * as mongoApi from '../../lib/mongoApi';
 import { useAuth } from '../../contexts/AuthContext';
 import { buildCategoryHierarchy } from '../../utils/categories';
 
@@ -36,13 +36,7 @@ export function CategoryManager({ categories, onCategoriesChange }: CategoryMana
     if (!user) return;
     
     try {
-      const { error } = await supabase
-        .from('categories')
-        .delete()
-        .eq('id', categoryId)
-        .eq('user_id', user.id);
-
-      if (error) throw error;
+      await mongoApi.deleteCategory(categoryId, user.id);
       onCategoriesChange();
     } catch (error) {
       console.error('Error al eliminar categoría:', error);
@@ -87,15 +81,11 @@ export function CategoryManager({ categories, onCategoriesChange }: CategoryMana
     setIsSubmitting(true);
 
     try {
-      const { error: insertError } = await supabase
-        .from('categories')
-        .insert({
-          name: newCategoryName.trim(),
-          parent_id: selectedParentId,
-          user_id: user.id
-        });
-
-      if (insertError) throw insertError;
+      await mongoApi.createCategory({
+        name: newCategoryName.trim(),
+        parent_id: selectedParentId,
+        user_id: user.id
+      });
 
       setNewCategoryName('');
       setSelectedParentId(undefined);

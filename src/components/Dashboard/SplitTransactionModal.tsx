@@ -3,7 +3,7 @@ import { X, Calculator, FileText, FolderTree, Split } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Transaction, CustomCategory } from '../../types';
-import { supabase } from '../../lib/supabase';
+import * as mongoApi from '../../lib/mongoApi';
 import { buildCategoryHierarchy } from '../../utils/categories';
 import { NewCategoryModal } from './NewCategoryModal';
 
@@ -136,20 +136,9 @@ export function SplitTransactionModal({
         }
       ];
 
-      // Insertar las nuevas transacciones
-      const { error: insertError } = await supabase
-        .from('transactions')
-        .insert(newTransactions);
-
-      if (insertError) throw insertError;
-
-      // Eliminar la transacción original
-      const { error: deleteError } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('id', transaction.id);
-
-      if (deleteError) throw deleteError;
+      await mongoApi.createTransaction(newTransactions[0]);
+      await mongoApi.createTransaction(newTransactions[1]);
+      await mongoApi.deleteTransaction(transaction.id);
 
       onSuccess();
       onClose();

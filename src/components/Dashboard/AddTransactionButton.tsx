@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { AddTransactionModal } from './AddTransactionModal';
 import { CustomCategory, Tag } from '../../types';
-import { supabase } from '../../lib/supabase';
+import * as mongoApi from '../../lib/mongoApi';
 import { getStoredUser } from '../../lib/auth';
 
 interface AddTransactionButtonProps {
@@ -28,13 +28,7 @@ export function AddTransactionButton({ onTransactionAdded }: AddTransactionButto
       const user = getStoredUser();
       if (!user) return;
 
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('name');
-
-      if (error) throw error;
+      const data = await mongoApi.getCategories(user.id);
       setCategories(data || []);
     } catch (error) {
       console.error('Error al cargar categorías:', error);
@@ -46,13 +40,7 @@ export function AddTransactionButton({ onTransactionAdded }: AddTransactionButto
       const user = getStoredUser();
       if (!user) return;
 
-      const { data, error } = await supabase
-        .from('tags')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('name');
-
-      if (error) throw error;
+      const data = await mongoApi.getTags(user.id);
       setTags(data || []);
     } catch (error) {
       console.error('Error al cargar tags:', error);

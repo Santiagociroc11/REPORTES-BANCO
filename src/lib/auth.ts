@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import * as mongoApi from './mongoApi';
 import { diagnostics } from './diagnostics';
 
 export interface User {
@@ -46,43 +46,7 @@ export function setStoredUser(user: User | null): void {
 export async function login(email: string, password: string): Promise<User> {
   diagnostics.info('Auth', 'Attempting login', { email });
   try {
-    // First check if the user exists and get their credentials
-    const { data: users, error: searchError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email);
-
-    if (searchError) {
-      diagnostics.error('Auth', 'Login search error', searchError);
-      throw new Error('Error al buscar usuario');
-    }
-
-    if (!users || users.length === 0) {
-      diagnostics.warn('Auth', 'No user found with email', { email });
-      throw new Error('Usuario no encontrado');
-    }
-
-    const user = users[0];
-
-    // In a real app, we would hash the password and compare with the stored hash
-    if (user.password !== password) {
-      diagnostics.warn('Auth', 'Invalid password attempt', { userId: user.id });
-      throw new Error('Contraseña incorrecta');
-    }
-
-    if (!user.active) {
-      diagnostics.warn('Auth', 'Inactive user attempted login', { userId: user.id });
-      throw new Error('Usuario inactivo');
-    }
-
-    const userData: User = {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      bank_notification_email: user.bank_notification_email,
-      active: user.active,
-      role: user.role || 'user'
-    };
+    const userData = await mongoApi.login(email, password);
 
     diagnostics.info('Auth', 'Login successful', { userId: userData.id });
     setStoredUser(userData);
@@ -96,60 +60,7 @@ export async function login(email: string, password: string): Promise<User> {
 export async function register(username: string, email: string, password: string): Promise<User> {
   diagnostics.info('Auth', 'Attempting registration', { email });
   try {
-    // Check if email already exists
-    const { data: existingUsers, error: checkError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email);
-
-    if (checkError) {
-      throw new Error('Error al verificar el correo');
-    }
-
-    if (existingUsers && existingUsers.length > 0) {
-      diagnostics.warn('Auth', 'Registration attempted with existing email', { email });
-      throw new Error('El correo ya está registrado');
-    }
-
-    // Generate UUID for the new user
-    const userId = crypto.randomUUID();
-
-    const { error: insertError } = await supabase
-      .from('users')
-      .insert([{
-        id: userId,
-        username,
-        email,
-        password, // In production, this would be hashed
-        active: true,
-        role: 'user'
-      }]);
-
-    if (insertError) {
-      diagnostics.error('Auth', 'Error creating user', insertError);
-      throw new Error(`Error al crear el usuario: ${insertError.message}`);
-    }
-
-    // Fetch the newly created user
-    const { data: userData, error: fetchError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
-
-    if (fetchError || !userData) {
-      diagnostics.error('Auth', 'Error fetching new user', fetchError);
-      throw new Error('Error al crear el usuario');
-    }
-
-    const user: User = {
-      id: userData.id,
-      email: userData.email,
-      username: userData.username,
-      bank_notification_email: userData.bank_notification_email,
-      active: userData.active,
-      role: userData.role
-    };
+    const user = await mongoApi.register(username, email, password);
 
     diagnostics.info('Auth', 'Registration successful', { userId: user.id });
     setStoredUser(user);

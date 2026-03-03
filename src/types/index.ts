@@ -12,6 +12,7 @@ export interface Transaction {
   notification_email?: string;
   custom_category?: CustomCategory;
   banco: string;
+  user_id?: string;
 }
 
 export interface CustomCategory {
