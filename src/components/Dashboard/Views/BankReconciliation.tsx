@@ -66,11 +66,6 @@ export function BankReconciliation({ transactions, onRefresh }: BankReconciliati
   const [addingId, setAddingId] = useState<string | null>(null);
   const [addingAll, setAddingAll] = useState(false);
 
-  const unmatchedEntries = useMemo(
-    () => reconciliation.filter((r) => !r.matched).map((r) => r.entry),
-    [reconciliation]
-  );
-
   const handleQuickAdd = async (entry: BankEntry) => {
     const user = getStoredUser();
     if (!user) {
@@ -101,7 +96,8 @@ export function BankReconciliation({ transactions, onRefresh }: BankReconciliati
   };
 
   const handleAddAll = async () => {
-    if (unmatchedEntries.length === 0) return;
+    const entries = reconciliation.filter((r) => !r.matched).map((r) => r.entry);
+    if (entries.length === 0) return;
     const user = getStoredUser();
     if (!user) {
       toast.error('Sesión expirada');
@@ -110,7 +106,7 @@ export function BankReconciliation({ transactions, onRefresh }: BankReconciliati
     setAddingAll(true);
     let added = 0;
     try {
-      for (const entry of unmatchedEntries) {
+      for (const entry of entries) {
         await mongoApi.createTransaction({
           amount: entry.valor,
           description: entry.descripcion || 'Sin descripción',
