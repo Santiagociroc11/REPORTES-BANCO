@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { getCategoryFullPath } from '../utils/categories';
 import { Transaction, CustomCategory } from '../types';
 import { Navbar } from '../components/Layout/Navbar';
 import { MobileMenu } from '../components/Layout/MobileMenu';
@@ -25,6 +27,7 @@ export default function Dashboard() {
   const [statsPeriod, setStatsPeriod] = useState<'day' | 'week' | 'month' | 'quarter'>('month');
   const [showTelegramConfig, setShowTelegramConfig] = useState(false);
   const [showEmailConfig, setShowEmailConfig] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Función para cargar categorías
   const fetchCategories = useCallback(async () => {
@@ -100,8 +103,21 @@ export default function Dashboard() {
   }, [user, fetchTransactions]);
 
   const filteredTransactions = useMemo(() => {
-    return showPending ? transactions.filter(t => !t.reported) : transactions;
-  }, [transactions, showPending]);
+    let list = showPending ? transactions.filter(t => !t.reported) : transactions;
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length >= 2) {
+      list = list.filter((t) => {
+        const desc = (t.description || '').toLowerCase();
+        const comment = (t.comment || '').toLowerCase();
+        const amount = String(t.amount || '');
+        const catObj = t.category_id ? categories.find(c => c.id === t.category_id) : null;
+        const cat = catObj ? getCategoryFullPath(catObj, categories) : '';
+        const catLower = cat.toLowerCase();
+        return desc.includes(q) || comment.includes(q) || amount.includes(q) || catLower.includes(q);
+      });
+    }
+    return list;
+  }, [transactions, showPending, searchQuery, categories]);
 
   const renderContent = useCallback(() => {
     if (loading) {
@@ -136,6 +152,31 @@ export default function Dashboard() {
                   {showPending ? 'Ver Todas' : 'Ver Pendientes'}
                 </button>
               </div>
+            </div>
+            <div className="space-y-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar por descripción, monto, categoría o comentario..."
+                className={`w-full pl-10 py-2.5 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm ${searchQuery ? 'pr-10' : 'pr-4'}`}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-sm"
+                >
+                  ✕
+                </button>
+              )}
+              </div>
+              {searchQuery && (
+                <p className="text-xs text-gray-400">
+                  {filteredTransactions.length} transacción(es) encontrada(s)
+                </p>
+              )}
             </div>
             <TransactionList
               transactions={filteredTransactions}
@@ -184,6 +225,7 @@ export default function Dashboard() {
     loading,
     currentView,
     showPending,
+    searchQuery,
     filteredTransactions,
     transactions,
     categories,
