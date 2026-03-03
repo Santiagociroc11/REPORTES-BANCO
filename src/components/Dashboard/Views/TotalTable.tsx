@@ -127,7 +127,16 @@ export function TotalTable({ transactions, categories }: TotalTableProps) {
     .sort((a, b) => Math.abs(b.changePercent) - Math.abs(a.changePercent))
     .slice(0, 10); // Top 10 cambios más significativos
 
-    return { tableData, months, significantChanges };
+    // Total por mes (suma de todas las categorías)
+    const monthTotals: Record<string, number> = {};
+    months.forEach((month) => {
+      monthTotals[month.key] = Object.keys(categoryMonthData).reduce(
+        (sum, cat) => sum + (categoryMonthData[cat][month.key] || 0),
+        0
+      );
+    });
+
+    return { tableData, months, significantChanges, monthTotals };
   }, [transactions, categories, period]);
 
   const sortedData = useMemo(() => {
@@ -270,9 +279,14 @@ export function TotalTable({ transactions, categories }: TotalTableProps) {
                     className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-800 transition-colors min-w-[120px]"
                     onClick={() => handleSort(month.key)}
                   >
-                    <div className="flex items-center justify-center">
-                      {month.label}
-                      {getSortIcon(month.key)}
+                    <div className="flex flex-col items-center justify-center gap-0.5">
+                      <span className="text-[10px] font-normal text-blue-400/90 tracking-wide">
+                        ${(data.monthTotals[month.key] || 0).toLocaleString('es-CO')}
+                      </span>
+                      <span className="flex items-center">
+                        {month.label}
+                        {getSortIcon(month.key)}
+                      </span>
                     </div>
                   </th>
                 ))}
