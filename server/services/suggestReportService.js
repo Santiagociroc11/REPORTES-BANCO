@@ -136,20 +136,63 @@ function suggestFromPatterns(patterns, categories, components = null) {
 export async function suggestReport({ transaction, userId }) {
   const categories = await Category.find({ user_id: userId }).lean();
 
-  const exactMatch = await ReportPattern.findOne({
+  const exactMatches = await ReportPattern.find({
     user_id: userId,
     transaction_type: transaction.transaction_type,
     description: transaction.description
   }).lean();
 
-  if (exactMatch && exactMatch.category_id) {
-    const cat = categories.find((c) => String(c._id) === exactMatch.category_id);
-    const catName = cat?.name || 'Sin nombre';
+  if (exactMatches.length > 0) {
+    const catCount = new Map();
+    const commentByCat = new Map();
+    for (const p of exactMatches) {
+      const cid = String(p.category_id || '');
+      if (!cid) continue;
+      catCount.set(cid, (catCount.get(cid) || 0) + 1);
+      const key = `${cid}::${(p.comment || '').trim()}`;
+      commentByCat.set(key, (commentByCat.get(key) || 0) + 1);
+    }
+
+    let bestCat = '';
+    let maxCount = 0;
+    for (const [cid, n] of catCount) {
+      if (n > maxCount) {
+        maxCount = n;
+        bestCat = cid;
+      }
+    }
+
+    let bestComment = '';
+    let maxComment = 0;
+    for (const [key, n] of commentByCat) {
+      if (key.startsWith(bestCat + '::') && n > maxComment) {
+        maxComment = n;
+        bestComment = key.replace(bestCat + '::', '');
+      }
+    }
+
+    const valid = categories.some((c) => String(c._id) === bestCat);
+    const categoryId = valid ? bestCat : (categories[0]?._id ?? null);
+    const catName = categories.find((c) => String(c._id) === categoryId)?.name || '';
+
+    const alternatives = [...catCount.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([cid, n]) => {
+        const c = categories.find((x) => String(x._id) === cid);
+        return { category_id: cid, category_name: c?.name || 'Sin nombre', count: n };
+      });
+
+    const hasMultipleCategories = catCount.size > 1;
+    const reasoning = hasMultipleCategories
+      ? `Coincidencia exacta: esta descripción coincide con ${exactMatches.length} reporte(s) anterior(es). Se usaron ${catCount.size} categoría(s) distintas; "${catName}" la más frecuente (${maxCount}). Elige la que corresponda.`
+      : `Coincidencia exacta: esta descripción coincide exactamente con un reporte anterior (${catName}).`;
+
     return {
-      category_id: exactMatch.category_id,
-      comment: exactMatch.comment || '',
-      reasoning: `Coincidencia exacta: esta descripción coincide exactamente con un reporte anterior (${catName}).`,
-      alternatives: [],
+      category_id: categoryId,
+      comment: bestComment.trim(),
+      reasoning,
+      alternatives: hasMultipleCategories ? alternatives : [],
       exactMatch: true
     };
   }
