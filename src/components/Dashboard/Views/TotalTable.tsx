@@ -129,14 +129,28 @@ export function TotalTable({ transactions, categories }: TotalTableProps) {
 
     // Total por mes (suma de todas las categorías)
     const monthTotals: Record<string, number> = {};
+    const monthTotalsSinFacebookAds: Record<string, number> = {};
+    const isFacebookAds = (cat: string) => /facebook\s*ads/i.test(cat);
+
     months.forEach((month) => {
       monthTotals[month.key] = Object.keys(categoryMonthData).reduce(
         (sum, cat) => sum + (categoryMonthData[cat][month.key] || 0),
         0
       );
+      monthTotalsSinFacebookAds[month.key] = Object.keys(categoryMonthData)
+        .filter((cat) => !isFacebookAds(cat))
+        .reduce((sum, cat) => sum + (categoryMonthData[cat][month.key] || 0), 0);
     });
 
-    return { tableData, months, significantChanges, monthTotals };
+    return {
+      tableData,
+      months,
+      significantChanges,
+      monthTotals,
+      monthTotalsSinFacebookAds,
+      totalGeneral: Object.values(monthTotals).reduce((a, b) => a + b, 0),
+      totalSinFacebookAds: Object.values(monthTotalsSinFacebookAds).reduce((a, b) => a + b, 0)
+    };
   }, [transactions, categories, period]);
 
   const sortedData = useMemo(() => {
@@ -331,6 +345,44 @@ export function TotalTable({ transactions, categories }: TotalTableProps) {
                 </tr>
               ))}
             </tbody>
+            {sortedData.length > 0 && (
+              <tfoot className="bg-gray-900/80 border-t-2 border-gray-600">
+                <tr>
+                  <td className="px-4 py-4 text-base font-semibold text-gray-400">
+                    Total sin Facebook Ads
+                  </td>
+                  {data.months.map((month) => (
+                    <td key={month.key} className="px-4 py-4 text-center">
+                      <span className="text-base font-semibold text-green-400">
+                        ${(data.monthTotalsSinFacebookAds[month.key] || 0).toLocaleString('es-CO')}
+                      </span>
+                    </td>
+                  ))}
+                  <td className="px-4 py-4 text-center">
+                    <span className="text-lg font-bold text-green-400">
+                      ${(data.totalSinFacebookAds || 0).toLocaleString('es-CO')}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-4 py-4 text-base font-semibold text-white">
+                    Total
+                  </td>
+                  {data.months.map((month) => (
+                    <td key={month.key} className="px-4 py-4 text-center">
+                      <span className="text-base font-bold text-blue-400">
+                        ${(data.monthTotals[month.key] || 0).toLocaleString('es-CO')}
+                      </span>
+                    </td>
+                  ))}
+                  <td className="px-4 py-4 text-center">
+                    <span className="text-xl font-bold text-blue-400">
+                      ${(data.totalGeneral || 0).toLocaleString('es-CO')}
+                    </span>
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
 
