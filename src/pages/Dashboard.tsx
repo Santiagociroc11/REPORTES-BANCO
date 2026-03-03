@@ -13,6 +13,7 @@ import { AddTransactionButton } from '../components/Dashboard/AddTransactionButt
 import { TransactionList } from '../components/Dashboard/TransactionList';
 import { UserSettings } from '../components/Dashboard/Views/UserSettings';
 import { TotalTable } from '../components/Dashboard/Views/TotalTable';
+import { BankReconciliation } from '../components/Dashboard/Views/BankReconciliation';
 import * as mongoApi from '../lib/mongoApi';
 import { toast } from 'react-toastify';
 
@@ -22,7 +23,7 @@ export default function Dashboard() {
   const [categories, setCategories] = useState<CustomCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<'transactions' | 'stats' | 'table' | 'user'>('transactions');
+  const [currentView, setCurrentView] = useState<'transactions' | 'stats' | 'table' | 'user' | 'reconciliation'>('transactions');
   const [showPending, setShowPending] = useState(true);
   const [statsPeriod, setStatsPeriod] = useState<'day' | 'week' | 'month' | 'quarter'>('month');
   const [showTelegramConfig, setShowTelegramConfig] = useState(false);
@@ -219,6 +220,10 @@ export default function Dashboard() {
             setShowEmailConfig={setShowEmailConfig}
             setShowTelegramConfig={setShowTelegramConfig}
           />
+        );
+      case 'reconciliation':
+        return (
+          <BankReconciliation transactions={transactions} categories={categories} />
         );
     }
   }, [
