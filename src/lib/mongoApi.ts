@@ -103,6 +103,13 @@ export async function searchHistoryTransactions(userId: string, query: string) {
   }>>(`/transactions/search-history?user_id=${encodeURIComponent(userId)}&q=${encodeURIComponent(query)}`);
 }
 
+export async function removeDuplicates(userId: string) {
+  return fetchApi<{ removed: number; kept: number }>('/transactions/remove-duplicates', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId }),
+  });
+}
+
 export async function suggestReport(transactionId: string, userId: string) {
   return fetchApi<{
     category_id: string | null;

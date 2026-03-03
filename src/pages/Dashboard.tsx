@@ -86,6 +86,19 @@ export default function Dashboard() {
     await fetchTransactions();
   }, [fetchTransactions]);
 
+  const handleRemoveDuplicates = useCallback(async () => {
+    if (!user) return;
+    if (!window.confirm('¿Quitar duplicados? Se eliminarán transacciones con mismo monto y misma fecha. Se conservará la reportada con categoría.')) return;
+    try {
+      const { removed } = await mongoApi.removeDuplicates(user.id);
+      await fetchTransactions();
+      toast.success(removed > 0 ? `Se eliminaron ${removed} duplicado(s)` : 'No hay duplicados');
+    } catch (error) {
+      console.error('Error al quitar duplicados:', error);
+      toast.error('Error al quitar duplicados');
+    }
+  }, [user, fetchTransactions]);
+
   const filteredTransactions = useMemo(() => {
     return showPending ? transactions.filter(t => !t.reported) : transactions;
   }, [transactions, showPending]);
@@ -104,16 +117,25 @@ export default function Dashboard() {
       case 'transactions':
         return (
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap justify-between items-center gap-3">
               <h2 className="text-xl font-semibold text-white">
                 {showPending ? 'Transacciones Pendientes' : 'Todas las Transacciones'}
               </h2>
-              <button
-                onClick={() => setShowPending(!showPending)}
-                className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-600 bg-gray-700 text-gray-200 hover:bg-gray-600"
-              >
-                {showPending ? 'Ver Todas' : 'Ver Pendientes'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleRemoveDuplicates}
+                  className="px-4 py-2 text-sm font-medium rounded-lg border border-amber-600 bg-amber-900/30 text-amber-300 hover:bg-amber-800/40"
+                  title="Eliminar transacciones duplicadas (mismo monto y fecha)"
+                >
+                  Quitar duplicados
+                </button>
+                <button
+                  onClick={() => setShowPending(!showPending)}
+                  className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-600 bg-gray-700 text-gray-200 hover:bg-gray-600"
+                >
+                  {showPending ? 'Ver Todas' : 'Ver Pendientes'}
+                </button>
+              </div>
             </div>
             <TransactionList
               transactions={filteredTransactions}
@@ -168,7 +190,8 @@ export default function Dashboard() {
     handleCategoriesChange,
     handleTransactionReport,
     handleTransactionDelete,
-    handleTransactionEdit
+    handleTransactionEdit,
+    handleRemoveDuplicates
   ]);
 
   return (

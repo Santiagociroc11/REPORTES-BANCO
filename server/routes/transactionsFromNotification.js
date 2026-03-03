@@ -5,8 +5,6 @@ import { randomUUID } from 'crypto';
 
 const router = Router();
 
-const DEDUP_WINDOW_MS = 5 * 60 * 1000; // 5 minutos
-
 router.post('/', async (req, res) => {
   try {
     const { amount, description, transaction_date, transaction_type, type, notification_email, banco } = req.body;
@@ -21,12 +19,11 @@ router.post('/', async (req, res) => {
     const amountNum = Number(amount);
     const descTrim = String(description).trim();
     const txDate = new Date(transaction_date);
-    const from = new Date(txDate.getTime() - DEDUP_WINDOW_MS);
-    const to = new Date(txDate.getTime() + DEDUP_WINDOW_MS);
+    const from = new Date(txDate.getFullYear(), txDate.getMonth(), txDate.getDate(), txDate.getHours(), txDate.getMinutes(), 0, 0);
+    const to = new Date(txDate.getFullYear(), txDate.getMonth(), txDate.getDate(), txDate.getHours(), txDate.getMinutes(), 59, 999);
 
     const existing = await Transaction.findOne({
       user_id: user._id,
-      description: descTrim,
       amount: amountNum,
       transaction_date: { $gte: from, $lte: to }
     }).lean();

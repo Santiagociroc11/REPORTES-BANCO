@@ -97,6 +97,56 @@ router.get('/search-history', async (req, res) => {
   }
 });
 
+router.post('/remove-duplicates', async (req, res) => {
+  try {
+    const { user_id } = req.body;
+    if (!user_id) {
+      return res.status(400).json({ error: 'user_id es requerido' });
+    }
+
+    const transactions = await Transaction.find({ user_id })
+      .sort({ transaction_date: -1, createdAt: -1 })
+      .lean();
+
+    const byKey = new Map();
+    for (const t of transactions) {
+      const d = new Date(t.transaction_date);
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const key = `${t.amount}::${dateStr}`;
+      if (!byKey.has(key)) {
+        byKey.set(key, []);
+      }
+      byKey.get(key).push(t);
+    }
+
+    const toDelete = [];
+    for (const [, group] of byKey) {
+      if (group.length <= 1) continue;
+      const sorted = [...group].sort((a, b) => {
+        const aScore = (a.reported ? 2 : 0) + (a.category_id ? 1 : 0);
+        const bScore = (b.reported ? 2 : 0) + (b.category_id ? 1 : 0);
+        if (bScore !== aScore) return bScore - aScore;
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+      for (let i = 1; i < sorted.length; i++) {
+        toDelete.push(sorted[i]._id);
+      }
+    }
+
+    let removed = 0;
+    for (const id of toDelete) {
+      await TransactionTag.deleteMany({ transaction_id: id });
+      await Transaction.findByIdAndDelete(id);
+      removed++;
+    }
+
+    res.json({ removed, kept: transactions.length - removed });
+  } catch (error) {
+    console.error('Remove duplicates error:', error);
+    res.status(500).json({ error: 'Error al quitar duplicados' });
+  }
+});
+
 router.post('/suggest-report', async (req, res) => {
   try {
     const { transaction_id, user_id } = req.body;

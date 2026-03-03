@@ -20,6 +20,15 @@
 
 El correo que recibe las notificaciones bancarias (`To` en el email de Gmail) **debe existir** en la tabla `users` con ese mismo `email`. Si no coincide, la API devolverá 404 "Usuario no encontrado".
 
+## Workflow corregido (Manual + Get many messages)
+
+Si usas **Manual Trigger** + **Get many messages** (en lugar de solo Gmail Trigger), importa `n8n-workflow-mongodb-fixed.json`. Incluye:
+
+1. **Edit Fields**: pasa `to_email` (To del correo) para que la API reciba `notification_email` correctamente cuando el flujo viene del Loop.
+2. **API MongoDB**: usa `$('Edit Fields').item.json.to_email` como fallback cuando no hay Gmail Trigger (flujo manual).
+3. **Rutas $json**: soporta tanto `$json.output.X` como `$json.X` (según versión del Information Extractor).
+4. **Telegram**: usa `toLocaleString('es-CO')` en lugar de `format()` para el monto.
+
 ## Si el nodo HTTP Request da error
 
 En versiones antiguas de n8n, el formato del body puede variar. Configura manualmente:
