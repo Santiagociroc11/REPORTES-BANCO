@@ -1,48 +1,68 @@
 import { ReportPattern } from '../models/ReportPattern.js';
 import { Category } from '../models/Category.js';
 
-const TOP_K = 8;
+const TOP_K = 10;
+
+const STOP_WORDS = new Set([
+  'en', 'con', 'de', 'la', 'el', 'a', 'por', 'al', 'del', 'los', 'las', 'un', 'una', 'su', 'sus',
+  'compra', 'pago', 'transferencia', 'programado', 'manual', 'tarjeta', 'tdeb', 't.deb', 'debit', 'credito',
+  'desde', 'hacia', 'cuenta', 'bancolombia', 'nequi', 'daviplata', 'pse', 'factura'
+]);
 
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
- * Búsqueda local por regex (sin embeddings).
- * Prioriza el mismo tipo de transacción y busca por palabras en description/category_name.
+ * Extrae palabras distintivas (excluye stop words y números de tarjeta comunes).
+ */
+function getDistinctiveWords(description) {
+  const words = description.split(/\s+/).filter((w) => w.length >= 2);
+  return words.filter((w) => {
+    const lower = w.toLowerCase();
+    if (STOP_WORDS.has(lower)) return false;
+    if (/^\d{4}$/.test(w)) return false;
+    if (/^\d+[,.]?\d*$/.test(w)) return false;
+    return true;
+  });
+}
+
+/**
+ * Búsqueda local: prioriza palabras distintivas (comercio, marca) y usa $and para coincidencias más precisas.
  */
 async function findSimilarPatterns({ transaction, userId }) {
   const baseFilter = { user_id: userId, transaction_type: transaction.transaction_type };
-  const searchText = `${transaction.description} ${String(transaction.amount)}`;
-  const words = searchText.split(/\s+/).filter((w) => w.length > 1);
+  const distinctive = getDistinctiveWords(transaction.description);
 
-  if (words.length === 0) {
-    return ReportPattern.find(baseFilter).limit(TOP_K).sort({ createdAt: -1 }).lean();
-  }
+  if (distinctive.length >= 2) {
+    const andConditions = distinctive.slice(0, 5).map((w) => {
+      const re = new RegExp(escapeRegex(w), 'i');
+      return { $or: [{ description: re }, { category_name: re }] };
+    });
 
-  const orConditions = words.flatMap((w) => {
-    const re = new RegExp(escapeRegex(w), 'i');
-    return [{ description: re }, { category_name: re }];
-  });
-
-  const patterns = await ReportPattern.find({ ...baseFilter, $or: orConditions })
-    .limit(TOP_K)
-    .sort({ createdAt: -1 })
-    .lean();
-
-  if (patterns.length < TOP_K) {
-    const ids = new Set(patterns.map((p) => p._id.toString()));
-    const extra = await ReportPattern.find(baseFilter)
-      .limit(TOP_K - patterns.length)
+    let patterns = await ReportPattern.find({ ...baseFilter, $and: andConditions })
+      .limit(TOP_K)
       .sort({ createdAt: -1 })
       .lean();
-    const combined = [...patterns];
-    for (const p of extra) {
-      if (!ids.has(p._id.toString())) combined.push(p);
-    }
-    return combined.slice(0, TOP_K);
+
+    if (patterns.length > 0) return patterns;
   }
-  return patterns;
+
+  if (distinctive.length >= 1) {
+    const orConditions = distinctive.slice(0, 4).flatMap((w) => {
+      const re = new RegExp(escapeRegex(w), 'i');
+      return [{ description: re }, { category_name: re }];
+    });
+
+    let patterns = await ReportPattern.find({ ...baseFilter, $or: orConditions })
+      .limit(TOP_K)
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (patterns.length > 0) return patterns;
+  }
+
+  return ReportPattern.find(baseFilter).limit(TOP_K).sort({ createdAt: -1 }).lean();
 }
 
 /**

@@ -23,8 +23,25 @@ if (!uri.includes('/reportes-banco') && !uri.includes('reportes-banco?')) {
 }
 uri = uri.replace(/(?<!:)\/\//g, '/');
 
+const STOP_WORDS = new Set([
+  'en', 'con', 'de', 'la', 'el', 'a', 'por', 'al', 'del', 'los', 'las', 'un', 'una', 'su', 'sus',
+  'compra', 'pago', 'transferencia', 'programado', 'manual', 'tarjeta', 'tdeb', 't.deb', 'debit', 'credito',
+  'desde', 'hacia', 'cuenta', 'bancolombia', 'nequi', 'daviplata', 'pse', 'factura'
+]);
+
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function getDistinctiveWords(desc) {
+  const words = desc.split(/\s+/).filter((w) => w.length >= 2);
+  return words.filter((w) => {
+    const lower = w.toLowerCase();
+    if (STOP_WORDS.has(lower)) return false;
+    if (/^\d{4}$/.test(w)) return false;
+    if (/^\d+[,.]?\d*$/.test(w)) return false;
+    return true;
+  });
 }
 
 async function main() {
@@ -35,11 +52,9 @@ async function main() {
   console.log('user_id:', userId || '(todos si no se especifica)');
   console.log('');
 
-  const searchText = `${description} ${String(amount)}`;
-  const words = searchText.split(/\s+/).filter((w) => w.length > 1);
-
-  console.log('=== Palabras extraídas ===');
-  console.log(words);
+  const distinctive = getDistinctiveWords(description);
+  console.log('=== Palabras distintivas (sin stop words) ===');
+  console.log(distinctive);
   console.log('');
 
   const client = new MongoClient(uri);
@@ -59,32 +74,39 @@ async function main() {
     console.log(`Patrones del tipo "${transaction_type}"${userId ? ` (user: ${userId})` : ''}:`, totalTipo);
     console.log('');
 
-    if (words.length > 0) {
-      const orConditions = words.flatMap((w) => {
-        const re = new RegExp(escapeRegex(w), 'i');
-        return [{ description: re }, { category_name: re }];
-      });
+    if (distinctive.length > 0) {
+      let patterns = [];
 
-      const patterns = await coll
-        .find({ ...baseFilter, $or: orConditions })
-        .sort({ createdAt: -1 })
-        .limit(8)
-        .toArray();
+      if (distinctive.length >= 2) {
+        const andConditions = distinctive.slice(0, 5).map((w) => {
+          const re = new RegExp(escapeRegex(w), 'i');
+          return { $or: [{ description: re }, { category_name: re }] };
+        });
+        patterns = await coll.find({ ...baseFilter, $and: andConditions }).sort({ createdAt: -1 }).limit(10).toArray();
+        if (patterns.length > 0) console.log('(búsqueda $and - todas las palabras distintivas)');
+      }
 
-      console.log('=== Patrones similares encontrados ===');
+      if (patterns.length === 0 && distinctive.length >= 1) {
+        const orConditions = distinctive.slice(0, 4).flatMap((w) => {
+          const re = new RegExp(escapeRegex(w), 'i');
+          return [{ description: re }, { category_name: re }];
+        });
+        patterns = await coll.find({ ...baseFilter, $or: orConditions }).sort({ createdAt: -1 }).limit(10).toArray();
+        if (patterns.length > 0) console.log('(búsqueda $or - alguna palabra distintiva)');
+      }
+
+      if (patterns.length === 0) {
+        patterns = await coll.find(baseFilter).sort({ createdAt: -1 }).limit(5).toArray();
+        console.log('(fallback: últimos del mismo tipo)');
+      }
+
+      console.log('\n=== Patrones similares encontrados ===');
       if (patterns.length === 0) {
         console.log('(ninguno)');
-        const fallback = await coll.find(baseFilter).sort({ createdAt: -1 }).limit(5).toArray();
-        if (fallback.length > 0) {
-          console.log('\n--- Fallback: últimos del mismo tipo ---');
-          fallback.forEach((p, i) => {
-            console.log(`${i + 1}. "${p.description}" → ${p.category_name} | ${p.comment || '-'}`);
-          });
-        }
       } else {
         patterns.forEach((p, i) => {
           console.log(`${i + 1}. "${p.description}" (${p.amount})`);
-          console.log(`   → categoría: ${p.category_name} | comentario: ${p.comment || '(ninguno)'}`);
+          console.log(`   → categoría: ${p.category_name} | comentario: ${p.comment || '-'}`);
         });
       }
     }
