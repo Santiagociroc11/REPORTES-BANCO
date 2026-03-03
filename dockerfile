@@ -9,6 +9,7 @@ RUN npm ci
 
 # 2. Construir frontend (API URL relativa para mismo origen)
 COPY . .
+COPY .env.example .env
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
