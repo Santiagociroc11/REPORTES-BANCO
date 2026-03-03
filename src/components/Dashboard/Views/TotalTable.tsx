@@ -279,36 +279,40 @@ export function TotalTable({ transactions, categories }: TotalTableProps) {
             <thead className="bg-gray-900 sticky top-0 z-10">
               {sortedData.length > 0 && (
                 <>
-                  <tr className="border-b border-gray-700">
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-400">
-                      Total sin Facebook Ads
+                  <tr className="bg-gradient-to-r from-green-950/30 to-transparent border-b border-green-800/20">
+                    <th className="px-4 py-3 text-left">
+                      <span className="text-xs font-medium uppercase tracking-widest text-green-400/80">
+                        Sin Facebook Ads
+                      </span>
                     </th>
                     {data.months.map((month) => (
-                      <th key={month.key} className="px-4 py-2 text-center">
-                        <span className="text-base font-semibold text-green-400">
+                      <th key={month.key} className="px-4 py-3 text-center">
+                        <span className="text-sm font-medium text-green-300/90 tabular-nums">
                           ${(data.monthTotalsSinFacebookAds[month.key] || 0).toLocaleString('es-CO')}
                         </span>
                       </th>
                     ))}
-                    <th className="px-4 py-2 text-center">
-                      <span className="text-lg font-bold text-green-400">
+                    <th className="px-4 py-3 text-center">
+                      <span className="inline-block px-3 py-1.5 rounded-lg bg-green-500/15 text-base font-bold text-green-300 border border-green-500/30 tabular-nums">
                         ${(data.totalSinFacebookAds || 0).toLocaleString('es-CO')}
                       </span>
                     </th>
                   </tr>
-                  <tr className="border-b border-gray-700">
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-white">
-                      Total
+                  <tr className="bg-gradient-to-r from-blue-950/40 to-transparent border-b border-gray-700">
+                    <th className="px-4 py-3 text-left">
+                      <span className="text-xs font-medium uppercase tracking-widest text-blue-400/90">
+                        Total
+                      </span>
                     </th>
                     {data.months.map((month) => (
-                      <th key={month.key} className="px-4 py-2 text-center">
-                        <span className="text-base font-bold text-blue-400">
+                      <th key={month.key} className="px-4 py-3 text-center">
+                        <span className="text-sm font-semibold text-blue-300 tabular-nums">
                           ${(data.monthTotals[month.key] || 0).toLocaleString('es-CO')}
                         </span>
                       </th>
                     ))}
-                    <th className="px-4 py-2 text-center">
-                      <span className="text-xl font-bold text-blue-400">
+                    <th className="px-4 py-3 text-center">
+                      <span className="inline-block px-4 py-2 rounded-xl bg-blue-500/20 text-lg font-bold text-blue-300 border border-blue-500/40 tabular-nums shadow-sm">
                         ${(data.totalGeneral || 0).toLocaleString('es-CO')}
                       </span>
                     </th>
