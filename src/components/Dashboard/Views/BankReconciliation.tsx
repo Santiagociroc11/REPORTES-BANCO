@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { toast } from 'react-toastify';
-import { FileSpreadsheet, CheckCircle2, AlertCircle, Plus } from 'lucide-react';
+import { FileSpreadsheet, CheckCircle2, AlertCircle, Plus, Loader2 } from 'lucide-react';
 import { format, parse } from 'date-fns';
-import { Transaction, CustomCategory } from '../../../types';
-import { AddTransactionModal, AddTransactionInitialData } from '../AddTransactionModal';
+import { Transaction } from '../../../types';
+import * as mongoApi from '../../../lib/mongoApi';
+import { getStoredUser } from '../../../lib/auth';
 
 interface BankEntry {
   fecha: string;
@@ -15,9 +16,7 @@ interface BankEntry {
 
 interface BankReconciliationProps {
   transactions: Transaction[];
-  categories: CustomCategory[];
   onRefresh?: () => void;
-  onCategoriesChange?: () => void;
 }
 
 const DATE_PATTERN = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
@@ -61,10 +60,80 @@ function parseBankStatement(text: string): BankEntry[] {
   return entries;
 }
 
-export function BankReconciliation({ transactions, categories, onRefresh, onCategoriesChange }: BankReconciliationProps) {
+export function BankReconciliation({ transactions, onRefresh }: BankReconciliationProps) {
   const [bankText, setBankText] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'matched' | 'unmatched'>('all');
-  const [addModalEntry, setAddModalEntry] = useState<BankEntry | null>(null);
+  const [addingId, setAddingId] = useState<string | null>(null);
+  const [addingAll, setAddingAll] = useState(false);
+
+  const unmatchedEntries = useMemo(
+    () => reconciliation.filter((r) => !r.matched).map((r) => r.entry),
+    [reconciliation]
+  );
+
+  const handleQuickAdd = async (entry: BankEntry) => {
+    const user = getStoredUser();
+    if (!user) {
+      toast.error('Sesión expirada');
+      return;
+    }
+    setAddingId(entry.rawLine);
+    try {
+      await mongoApi.createTransaction({
+        amount: entry.valor,
+        description: entry.descripcion || 'Sin descripción',
+        transaction_date: `${entry.fecha}T12:00:00.000Z`,
+        category_id: null,
+        reported: false,
+        transaction_type: 'gasto manual',
+        type: 'gasto',
+        user_id: user.id,
+        comment: entry.referencia || null,
+        banco: 'Bancolombia'
+      });
+      toast.success('Agregada como pendiente. Clasifícala en Transacciones.');
+      onRefresh?.();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al agregar');
+    } finally {
+      setAddingId(null);
+    }
+  };
+
+  const handleAddAll = async () => {
+    if (unmatchedEntries.length === 0) return;
+    const user = getStoredUser();
+    if (!user) {
+      toast.error('Sesión expirada');
+      return;
+    }
+    setAddingAll(true);
+    let added = 0;
+    try {
+      for (const entry of unmatchedEntries) {
+        await mongoApi.createTransaction({
+          amount: entry.valor,
+          description: entry.descripcion || 'Sin descripción',
+          transaction_date: `${entry.fecha}T12:00:00.000Z`,
+          category_id: null,
+          reported: false,
+          transaction_type: 'gasto manual',
+          type: 'gasto',
+          user_id: user.id,
+          comment: entry.referencia || null,
+          banco: 'Bancolombia'
+        });
+        added++;
+      }
+      toast.success(`${added} agregadas como pendientes. Clasifícalas en Transacciones.`);
+      onRefresh?.();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al agregar');
+      if (added > 0) onRefresh?.();
+    } finally {
+      setAddingAll(false);
+    }
+  };
 
   const bankEntries = useMemo(() => parseBankStatement(bankText), [bankText]);
 
@@ -162,7 +231,17 @@ export function BankReconciliation({ transactions, categories, onRefresh, onCate
               </p>
               <p className="text-xs text-amber-500">{stats.unmatched} pendientes</p>
             </div>
-            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 flex items-center">
+            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 flex flex-col gap-2">
+              {stats.unmatched > 0 && (
+                <button
+                  onClick={handleAddAll}
+                  disabled={addingAll}
+                  className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-60"
+                >
+                  {addingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  Agregar todos ({stats.unmatched})
+                </button>
+              )}
               <div className="flex gap-2">
                 <button
                   onClick={() => setFilterStatus('all')}
@@ -231,11 +310,16 @@ export function BankReconciliation({ transactions, categories, onRefresh, onCate
                       <td className="px-4 py-2 text-right">
                         {!r.matched && (
                           <button
-                            onClick={() => setAddModalEntry(r.entry)}
-                            className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 transition-colors"
-                            title="Agregar al sistema"
+                            onClick={() => handleQuickAdd(r.entry)}
+                            disabled={addingId === r.entry.rawLine}
+                            className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-60 transition-colors"
+                            title="Agregar como pendiente (clasificar después)"
                           >
-                            <Plus className="h-3.5 w-3.5" />
+                            {addingId === r.entry.rawLine ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Plus className="h-3.5 w-3.5" />
+                            )}
                             Agregar
                           </button>
                         )}
@@ -248,24 +332,6 @@ export function BankReconciliation({ transactions, categories, onRefresh, onCate
           </div>
         </>
       )}
-
-      <AddTransactionModal
-        isOpen={!!addModalEntry}
-        onClose={() => setAddModalEntry(null)}
-        onSuccess={() => {
-          setAddModalEntry(null);
-          onRefresh?.();
-          toast.success('Transacción agregada. La conciliación se actualizará.');
-        }}
-        categories={categories}
-        refreshCategories={onCategoriesChange}
-        initialData={addModalEntry ? {
-          amount: addModalEntry.valor,
-          description: addModalEntry.descripcion || 'Sin descripción',
-          date: addModalEntry.fecha,
-          comment: addModalEntry.referencia ? `Ref: ${addModalEntry.referencia}` : undefined
-        } : undefined}
-      />
     </div>
   );
 }
