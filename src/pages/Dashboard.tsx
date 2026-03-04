@@ -217,6 +217,7 @@ export default function Dashboard() {
             transactions={transactions}
             categories={categories}
             onCategoriesChange={handleCategoriesChange}
+            onRefresh={fetchTransactions}
             setShowEmailConfig={setShowEmailConfig}
             setShowTelegramConfig={setShowTelegramConfig}
           />

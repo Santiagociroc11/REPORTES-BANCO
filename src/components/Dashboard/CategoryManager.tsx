@@ -1,18 +1,27 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Plus, FolderTree, X, Pencil, GitMerge } from 'lucide-react';
-import { CustomCategory, CategoryType } from '../../types';
+import { CustomCategory, CategoryType, Transaction } from '../../types';
 import * as mongoApi from '../../lib/mongoApi';
 import { useAuth } from '../../contexts/AuthContext';
-import { buildCategoryHierarchy } from '../../utils/categories';
+import { buildCategoryHierarchy, getCategoryFullPath } from '../../utils/categories';
 import { EditCategoryModal } from './EditCategoryModal';
 import { MergeCategoryModal } from './MergeCategoryModal';
+import { CellTransactionsModal } from './Views/CellTransactionsModal';
 
 interface CategoryManagerProps {
   categories: CustomCategory[];
+  transactions: Transaction[];
   onCategoriesChange: () => void;
+  onRefresh?: () => void;
 }
 
-export function CategoryManager({ categories, onCategoriesChange }: CategoryManagerProps) {
+function getCategoryAndDescendantIds(cat: CustomCategory): string[] {
+  const ids = [cat.id];
+  (cat.subcategories || []).forEach((sub) => ids.push(...getCategoryAndDescendantIds(sub)));
+  return ids;
+}
+
+export function CategoryManager({ categories, transactions, onCategoriesChange, onRefresh }: CategoryManagerProps) {
   const { user } = useAuth();
   const [newCategoryName, setNewCategoryName] = useState('');
   const [selectedParentId, setSelectedParentId] = useState<string | undefined>();
@@ -20,6 +29,7 @@ export function CategoryManager({ categories, onCategoriesChange }: CategoryMana
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingCategory, setEditingCategory] = useState<CustomCategory | null>(null);
   const [showMergeModal, setShowMergeModal] = useState(false);
+  const [viewingCategory, setViewingCategory] = useState<CustomCategory | null>(null);
 
   // Memoize category hierarchy
   const categoryHierarchy = useMemo(() => buildCategoryHierarchy(categories), [categories]);
@@ -67,6 +77,19 @@ export function CategoryManager({ categories, onCategoriesChange }: CategoryMana
     [user, onCategoriesChange]
   );
 
+  const categoryTransactions = useMemo(() => {
+    if (!viewingCategory) return [];
+    const ids = getCategoryAndDescendantIds(viewingCategory);
+    return transactions
+      .filter((t) => t.type === 'gasto' && t.category_id && ids.includes(t.category_id))
+      .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime());
+  }, [viewingCategory, transactions]);
+
+  const categoryTotal = useMemo(
+    () => categoryTransactions.reduce((s, t) => s + Number(t.amount), 0),
+    [categoryTransactions]
+  );
+
   // Memoize category tree renderer
   const renderCategoryTree = useCallback((categories: CustomCategory[], level = 0) => {
     return categories.map(category => (
@@ -75,9 +98,16 @@ export function CategoryManager({ categories, onCategoriesChange }: CategoryMana
           className="flex items-center justify-between py-2 px-4 rounded-lg hover:bg-gray-700/50 transition-colors"
           style={{ marginLeft: `${level * 1.5}rem` }}
         >
-          <div className="flex items-center gap-2">
-            <FolderTree className="h-4 w-4 text-gray-400" />
-            <span className="text-gray-200">{category.name}</span>
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <FolderTree className="h-4 w-4 text-gray-400 flex-shrink-0" />
+            <button
+              type="button"
+              onClick={() => setViewingCategory(category)}
+              className="text-left text-gray-200 hover:text-blue-300 hover:underline truncate"
+              title="Ver transacciones"
+            >
+              {category.name}
+            </button>
             {level === 0 && category.type ? (
               <span className="text-xs px-1.5 py-0.5 rounded bg-gray-600 text-gray-300">
                 {category.type}
@@ -209,7 +239,7 @@ export function CategoryManager({ categories, onCategoriesChange }: CategoryMana
           </button>
         </div>
         <p className="text-sm text-gray-400 mb-3">
-          Lápiz: editar, mover o asignar tipo. Fusionar: unir dos categorías en una.
+          Clic en el nombre: ver transacciones. Lápiz: editar, mover o asignar tipo. Fusionar: unir dos categorías.
         </p>
         <div className="space-y-2">
           {renderCategoryTree(categoryHierarchy)}
@@ -230,6 +260,17 @@ export function CategoryManager({ categories, onCategoriesChange }: CategoryMana
         onClose={() => setShowMergeModal(false)}
         categories={categories}
         onMerge={handleMerge}
+      />
+
+      <CellTransactionsModal
+        isOpen={!!viewingCategory}
+        onClose={() => setViewingCategory(null)}
+        transactions={categoryTransactions}
+        categoryName={viewingCategory ? getCategoryFullPath(viewingCategory, categories) : ''}
+        monthLabel="Todas"
+        totalAmount={categoryTotal}
+        categories={categories}
+        onRefresh={onRefresh ?? onCategoriesChange}
       />
     </div>
   );

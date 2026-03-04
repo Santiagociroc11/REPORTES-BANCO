@@ -8,6 +8,7 @@ interface UserSettingsProps {
   transactions: Transaction[];
   categories: CustomCategory[];
   onCategoriesChange: () => void;
+  onRefresh?: () => void;
   setShowEmailConfig: (show: boolean) => void;
   setShowTelegramConfig: (show: boolean) => void;
 }
@@ -16,6 +17,7 @@ export function UserSettings({
   transactions,
   categories,
   onCategoriesChange,
+  onRefresh,
   setShowEmailConfig,
   setShowTelegramConfig
 }: UserSettingsProps) {
@@ -48,7 +50,12 @@ export function UserSettings({
 
       <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
         <h2 className="text-xl font-semibold text-white mb-6">Categorías</h2>
-        <CategoryManager categories={categories} onCategoriesChange={onCategoriesChange} />
+        <CategoryManager
+          categories={categories}
+          transactions={transactions}
+          onCategoriesChange={onCategoriesChange}
+          onRefresh={onRefresh}
+        />
       </div>
 
       <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
