@@ -368,11 +368,6 @@ export function TypeTable({ transactions, categories, onRefresh }: TypeTableProp
                 )
               : cellTransactions
         }
-                  (t) =>
-                    t.type === 'gasto' &&
-                    getTypeForTransaction(t) === selectedCell.typeKey
-                )
-        }
         categoryName={selectedCell ? TYPE_LABELS[selectedCell.typeKey] || selectedCell.typeKey : ''}
         monthLabel={selectedCell?.monthLabel ?? ''}
         totalAmount={selectedCell?.amount ?? 0}
