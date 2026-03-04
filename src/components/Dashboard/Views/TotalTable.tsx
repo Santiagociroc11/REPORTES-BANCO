@@ -30,7 +30,7 @@ export function TotalTable({ transactions, categories, onRefresh }: TotalTablePr
   const [period, setPeriod] = useState<PeriodOption>('6months');
   const [sortColumn, setSortColumn] = useState<string>('category');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-  const [selectedCell, setSelectedCell] = useState<{ categoryName: string; monthKey: string; monthLabel: string; amount: number } | null>(null);
+  const [selectedCell, setSelectedCell] = useState<{ categoryName: string; monthKey: string | null; monthLabel: string; amount: number } | null>(null);
 
   const data = useMemo(() => {
     const now = new Date();
@@ -167,8 +167,10 @@ export function TotalTable({ transactions, categories, onRefresh }: TotalTablePr
     const expenseTransactions = transactions.filter((t) => t.type === 'gasto');
     return expenseTransactions.filter((t) => {
       const catName = getCategoryName(t);
+      if (catName !== selectedCell.categoryName) return false;
+      if (!selectedCell.monthKey) return true;
       const monthKey = format(new Date(t.transaction_date), 'yyyy-MM');
-      return catName === selectedCell.categoryName && monthKey === selectedCell.monthKey;
+      return monthKey === selectedCell.monthKey;
     });
   }, [selectedCell, transactions, categories]);
 
@@ -377,7 +379,11 @@ export function TotalTable({ transactions, categories, onRefresh }: TotalTablePr
                   key={row.category}
                   className={`${rowIndex % 2 === 0 ? 'bg-gray-800' : 'bg-gray-750'} hover:bg-gray-700 transition-colors`}
                 >
-                  <td className="px-4 py-3 text-sm text-white font-medium">
+                  <td
+                    className="px-4 py-3 text-sm text-white font-medium cursor-pointer hover:bg-gray-600/50 hover:text-blue-300 transition-colors"
+                    onClick={() => setSelectedCell({ categoryName: row.category, monthKey: null, monthLabel: 'Todo el período', amount: row.total })}
+                    title="Ver todas las transacciones"
+                  >
                     {row.category}
                   </td>
                   {data.months.map((month, monthIndex) => {
