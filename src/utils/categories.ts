@@ -1,4 +1,13 @@
-import { CustomCategory } from '../types';
+import { CustomCategory, CategoryType } from '../types';
+
+export function getCategoryType(categoryId: string | null, categories: CustomCategory[]): CategoryType | 'sin_clasificar' {
+  if (!categoryId) return 'sin_clasificar';
+  const cat = categories.find((c) => c.id === categoryId);
+  if (!cat) return 'sin_clasificar';
+  if (cat.type) return cat.type;
+  if (cat.parent_id) return getCategoryType(cat.parent_id, categories);
+  return 'sin_clasificar';
+}
 
 export function buildCategoryHierarchy(categories: CustomCategory[]): CustomCategory[] {
   const categoryMap = new Map<string, CustomCategory>();

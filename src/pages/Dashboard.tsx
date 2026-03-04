@@ -13,6 +13,7 @@ import { AddTransactionButton } from '../components/Dashboard/AddTransactionButt
 import { TransactionList } from '../components/Dashboard/TransactionList';
 import { UserSettings } from '../components/Dashboard/Views/UserSettings';
 import { TotalTable } from '../components/Dashboard/Views/TotalTable';
+import { TypeTable } from '../components/Dashboard/Views/TypeTable';
 import { BankReconciliation } from '../components/Dashboard/Views/BankReconciliation';
 import * as mongoApi from '../lib/mongoApi';
 import { toast } from 'react-toastify';
@@ -26,6 +27,7 @@ export default function Dashboard() {
   const [currentView, setCurrentView] = useState<'transactions' | 'stats' | 'table' | 'user' | 'reconciliation'>('transactions');
   const [showPending, setShowPending] = useState(true);
   const [statsPeriod, setStatsPeriod] = useState<'day' | 'week' | 'month' | 'quarter'>('month');
+  const [tableMode, setTableMode] = useState<'category' | 'type'>('category');
   const [showTelegramConfig, setShowTelegramConfig] = useState(false);
   const [showEmailConfig, setShowEmailConfig] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -205,11 +207,39 @@ export default function Dashboard() {
         );
       case 'table':
         return (
-          <TotalTable
-            transactions={transactions}
-            categories={categories}
-            onRefresh={fetchTransactions}
-          />
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setTableMode('category')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  tableMode === 'category' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                Por categoría
+              </button>
+              <button
+                onClick={() => setTableMode('type')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  tableMode === 'type' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+              >
+                Por clasificación (tipo)
+              </button>
+            </div>
+            {tableMode === 'category' ? (
+              <TotalTable
+                transactions={transactions}
+                categories={categories}
+                onRefresh={fetchTransactions}
+              />
+            ) : (
+              <TypeTable
+                transactions={transactions}
+                categories={categories}
+                onRefresh={fetchTransactions}
+              />
+            )}
+          </div>
         );
       case 'user':
         return (
@@ -231,6 +261,7 @@ export default function Dashboard() {
     loading,
     currentView,
     showPending,
+    tableMode,
     searchQuery,
     filteredTransactions,
     transactions,
