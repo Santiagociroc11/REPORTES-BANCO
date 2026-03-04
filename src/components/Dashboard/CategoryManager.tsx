@@ -77,6 +77,22 @@ export function CategoryManager({ categories, transactions, onCategoriesChange, 
     [user, onCategoriesChange]
   );
 
+  const categoryStats = useMemo(() => {
+    const stats = new Map<string, { count: number; amount: number }>();
+    const expenseTx = transactions.filter((t) => t.type === 'gasto');
+
+    const computeStats = (cat: CustomCategory) => {
+      const ids = getCategoryAndDescendantIds(cat);
+      const relevant = expenseTx.filter((t) => t.category_id && ids.includes(t.category_id));
+      const count = relevant.length;
+      const amount = relevant.reduce((s, t) => s + Number(t.amount), 0);
+      stats.set(cat.id, { count, amount });
+      (cat.subcategories || []).forEach(computeStats);
+    };
+    categoryHierarchy.forEach(computeStats);
+    return stats;
+  }, [categoryHierarchy, transactions]);
+
   const categoryTransactions = useMemo(() => {
     if (!viewingCategory) return [];
     const ids = getCategoryAndDescendantIds(viewingCategory);
@@ -92,7 +108,11 @@ export function CategoryManager({ categories, transactions, onCategoriesChange, 
 
   // Memoize category tree renderer
   const renderCategoryTree = useCallback((categories: CustomCategory[], level = 0) => {
-    return categories.map(category => (
+    return categories.map(category => {
+      const stat = categoryStats.get(category.id);
+      const count = stat?.count ?? 0;
+      const amount = stat?.amount ?? 0;
+      return (
       <div key={category.id}>
         <div 
           className="flex items-center justify-between py-2 px-4 rounded-lg hover:bg-gray-700/50 transition-colors"
@@ -113,6 +133,9 @@ export function CategoryManager({ categories, transactions, onCategoriesChange, 
                 {category.type}
               </span>
             ) : null}
+            <span className="text-xs text-gray-500 flex-shrink-0">
+              {count} · ${amount.toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
+            </span>
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -138,8 +161,8 @@ export function CategoryManager({ categories, transactions, onCategoriesChange, 
           </div>
         )}
       </div>
-    ));
-  }, [handleDeleteCategory]);
+    );});
+  }, [handleDeleteCategory, categoryStats]);
 
   // Optimized add category handler
   const handleAddCategory = useCallback(async () => {
