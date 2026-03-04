@@ -61,7 +61,7 @@ const NEW_STRUCTURE = [
   },
   {
     root: 'NEGOCIO / AGENCIA',
-    rootType: 'otros',
+    rootType: 'negocio',
     subs: [
       { name: 'Facebook & Google Ads' },
       { name: 'SaaS y Herramientas' },

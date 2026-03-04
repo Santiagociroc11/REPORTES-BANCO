@@ -8,7 +8,8 @@ const CATEGORY_TYPES: { value: CategoryType; label: string; description: string 
   { value: 'alimentos', label: 'Alimentos', description: 'Comida, mercado, restaurantes, domicilios' },
   { value: 'discrecional', label: 'Discrecional', description: 'Entretenimiento, ropa, regalos, viajes' },
   { value: 'familia', label: 'Familia', description: 'Ayuda familiar, hijos, mascotas' },
-  { value: 'ahorro', label: 'Ahorro', description: 'Ahorro, inversiones' },
+  { value: 'negocio', label: 'Negocio', description: 'Gastos e inversiones del negocio o agencia' },
+  { value: 'ahorro', label: 'Ahorro', description: 'Ahorro, inversiones personales' },
   { value: 'otros', label: 'Otros', description: 'Sin clasificar' }
 ];
 

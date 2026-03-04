@@ -18,6 +18,7 @@ const TYPE_LABELS: Record<string, string> = {
   alimentos: 'Alimentos',
   discrecional: 'Discrecional',
   familia: 'Familia',
+  negocio: 'Negocio',
   ahorro: 'Ahorro',
   otros: 'Otros',
   sin_clasificar: 'Sin clasificar'
@@ -27,6 +28,7 @@ const TYPE_ORDER: (CategoryType | 'sin_clasificar')[] = [
   'obligatorio',
   'alimentos',
   'familia',
+  'negocio',
   'discrecional',
   'otros',
   'ahorro',
@@ -44,6 +46,7 @@ type SortDirection = 'asc' | 'desc';
 
 export function TypeTable({ transactions, categories, onRefresh }: TypeTableProps) {
   const [period, setPeriod] = useState<PeriodOption>('6months');
+  const [excludeNegocio, setExcludeNegocio] = useState(false);
   const [sortColumn, setSortColumn] = useState<string>('type');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [selectedCell, setSelectedCell] = useState<{
@@ -78,7 +81,10 @@ export function TypeTable({ transactions, categories, onRefresh }: TypeTableProp
       typeMonthData[typeKey][monthKey] += Number(t.amount);
     });
 
-    const tableData = TYPE_ORDER.filter((key) => typeMonthData[key]).map((typeKey) => {
+    const typesToShow = excludeNegocio
+      ? TYPE_ORDER.filter((k) => k !== 'negocio')
+      : TYPE_ORDER;
+    const tableData = typesToShow.filter((key) => typeMonthData[key]).map((typeKey) => {
       const row: Record<string, unknown> = { type: typeKey, total: 0 };
       months.forEach((month, index) => {
         const amount = typeMonthData[typeKey]?.[month.key] || 0;
@@ -94,20 +100,34 @@ export function TypeTable({ transactions, categories, onRefresh }: TypeTableProp
     });
 
     const monthTotals: Record<string, number> = {};
+    const keysForTotals = excludeNegocio
+      ? Object.keys(typeMonthData).filter((k) => k !== 'negocio')
+      : Object.keys(typeMonthData);
     months.forEach((m) => {
-      monthTotals[m.key] = Object.keys(typeMonthData).reduce(
+      monthTotals[m.key] = keysForTotals.reduce(
         (sum, k) => sum + (typeMonthData[k]?.[m.key] || 0),
         0
       );
     });
 
+    const totalGeneral = Object.values(monthTotals).reduce((a, b) => a + b, 0);
+    const obligatorioTotal = months.reduce(
+      (sum, m) => sum + (typeMonthData['obligatorio']?.[m.key] || 0),
+      0
+    );
+    const restoTotal = totalGeneral - obligatorioTotal;
+    const obligatorioPct = totalGeneral > 0 ? (obligatorioTotal / totalGeneral) * 100 : 0;
+    const restoPct = totalGeneral > 0 ? (restoTotal / totalGeneral) * 100 : 0;
+
     return {
       tableData,
       months,
       monthTotals,
-      totalGeneral: Object.values(monthTotals).reduce((a, b) => a + b, 0)
+      totalGeneral,
+      obligatorioPct,
+      restoPct
     };
-  }, [transactions, categories, period]);
+  }, [transactions, categories, period, excludeNegocio]);
 
   const getTypeForTransaction = (t: Transaction) =>
     getCategoryType(t.category_id || null, categories);
@@ -173,17 +193,28 @@ export function TypeTable({ transactions, categories, onRefresh }: TypeTableProp
             <Tag className="h-5 w-5 md:h-6 md:w-6 mr-2" />
             Tabla por Clasificación (Tipo)
           </h2>
-          <div className="flex items-center space-x-2">
-            <Filter className="h-4 w-4 text-gray-400" />
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value as PeriodOption)}
-              className="bg-gray-700 text-white px-3 py-1 rounded-md text-sm border border-gray-600"
-            >
-              <option value="3months">Últimos 3 meses</option>
-              <option value="6months">Últimos 6 meses</option>
-              <option value="12months">Último año</option>
-            </select>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-300">
+              <input
+                type="checkbox"
+                checked={excludeNegocio}
+                onChange={(e) => setExcludeNegocio(e.target.checked)}
+                className="rounded border-gray-500 bg-gray-700 text-blue-500 focus:ring-blue-500"
+              />
+              Excluir negocio
+            </label>
+            <div className="flex items-center space-x-2">
+              <Filter className="h-4 w-4 text-gray-400" />
+              <select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value as PeriodOption)}
+                className="bg-gray-700 text-white px-3 py-1 rounded-md text-sm border border-gray-600"
+              >
+                <option value="3months">Últimos 3 meses</option>
+                <option value="6months">Últimos 6 meses</option>
+                <option value="12months">Último año</option>
+              </select>
+            </div>
           </div>
         </div>
         <div className="text-sm text-gray-400 flex items-center">
@@ -212,12 +243,34 @@ export function TypeTable({ transactions, categories, onRefresh }: TypeTableProp
                     </th>
                   ))}
                   <th className="px-4 py-3 text-center">
-                    <span className="inline-block px-4 py-2 rounded-xl bg-blue-500/20 text-lg font-bold text-blue-300 border border-blue-500/40 tabular-nums">
-                      ${(data.totalGeneral || 0).toLocaleString('es-CO', {
-                        maximumFractionDigits: 0,
-                        minimumFractionDigits: 0
-                      })}
-                    </span>
+                    <div className="inline-flex flex-col items-center gap-1.5">
+                      <span className="inline-block px-4 py-2 rounded-xl bg-blue-500/20 text-lg font-bold text-blue-300 border border-blue-500/40 tabular-nums">
+                        ${(data.totalGeneral || 0).toLocaleString('es-CO', {
+                          maximumFractionDigits: 0,
+                          minimumFractionDigits: 0
+                        })}
+                      </span>
+                      {data.totalGeneral > 0 && (
+                        <div className="flex flex-col items-center gap-0.5 min-w-[100px]">
+                          <div className="flex w-full h-1.5 rounded-full overflow-hidden bg-gray-700">
+                            <div
+                              className="bg-amber-500/80 transition-all"
+                              style={{ width: `${data.obligatorioPct}%` }}
+                            />
+                            <div
+                              className="bg-emerald-500/60 transition-all"
+                              style={{ width: `${data.restoPct}%` }}
+                            />
+                          </div>
+                          <span className="text-[10px] text-gray-400">
+                            <span className="text-amber-400/90">{Math.round(data.obligatorioPct)}%</span>
+                            {' oblig. · '}
+                            <span className="text-emerald-400/90">{Math.round(data.restoPct)}%</span>
+                            {' resto'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </th>
                 </tr>
               )}

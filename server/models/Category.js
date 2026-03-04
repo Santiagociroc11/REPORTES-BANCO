@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { randomUUID } from 'crypto';
 
-const CATEGORY_TYPES = ['obligatorio', 'alimentos', 'discrecional', 'familia', 'ahorro', 'otros'];
+const CATEGORY_TYPES = ['obligatorio', 'alimentos', 'discrecional', 'familia', 'ahorro', 'negocio', 'otros'];
 
 const categorySchema = new mongoose.Schema({
   _id: { type: String, default: () => randomUUID() },
