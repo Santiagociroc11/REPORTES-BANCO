@@ -147,11 +147,10 @@ export function EditCategoryModal({
               <p className="mt-1 text-xs text-gray-500">Cambia el padre para mover la categoría en el árbol</p>
             </div>
 
-            {parentId === '' && (
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-1">
                 <Tag className="h-4 w-4" />
-                Tipo (solo categorías raíz)
+                Tipo {parentId !== '' && '(hereda del padre si no se asigna)'}
               </label>
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {CATEGORY_TYPES.map((t) => (
@@ -186,7 +185,6 @@ export function EditCategoryModal({
                 Quitar tipo
               </button>
             </div>
-            )}
 
             {error && (
               <div className="rounded-lg bg-red-900/30 border border-red-500 p-3 text-sm text-red-400">

@@ -128,7 +128,7 @@ export function CategoryManager({ categories, transactions, onCategoriesChange, 
             >
               {category.name}
             </button>
-            {level === 0 && category.type ? (
+            {category.type ? (
               <span className="text-xs px-1.5 py-0.5 rounded bg-gray-600 text-gray-300">
                 {category.type}
               </span>
