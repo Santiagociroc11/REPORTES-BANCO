@@ -135,6 +135,28 @@ export async function createCategory(data: { name: string; parent_id?: string | 
   });
 }
 
+export async function updateCategory(
+  id: string,
+  userId: string,
+  data: { name?: string; type?: string | null; parent_id?: string | null }
+) {
+  return fetchApi(`/categories/${id}?user_id=${encodeURIComponent(userId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function mergeCategories(
+  userId: string,
+  sourceId: string,
+  targetId: string
+) {
+  return fetchApi('/categories/merge', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId, source_id: sourceId, target_id: targetId }),
+  });
+}
+
 export async function deleteCategory(id: string, userId: string) {
   return fetchApi(`/categories/${id}?user_id=${encodeURIComponent(userId)}`, {
     method: 'DELETE',

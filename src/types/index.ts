@@ -15,6 +15,8 @@ export interface Transaction {
   user_id?: string;
 }
 
+export type CategoryType = 'obligatorio' | 'alimentos' | 'discrecional' | 'familia' | 'ahorro' | 'otros';
+
 export interface CustomCategory {
   id: string;
   name: string;
@@ -22,6 +24,7 @@ export interface CustomCategory {
   user_id: string;
   created_at: string;
   updated_at: string;
+  type?: CategoryType | null;
   subcategories?: CustomCategory[];
 }
 

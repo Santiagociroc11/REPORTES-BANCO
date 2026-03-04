@@ -1,9 +1,11 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Plus, FolderTree, X } from 'lucide-react';
-import { CustomCategory } from '../../types';
+import { Plus, FolderTree, X, Pencil, GitMerge } from 'lucide-react';
+import { CustomCategory, CategoryType } from '../../types';
 import * as mongoApi from '../../lib/mongoApi';
 import { useAuth } from '../../contexts/AuthContext';
 import { buildCategoryHierarchy } from '../../utils/categories';
+import { EditCategoryModal } from './EditCategoryModal';
+import { MergeCategoryModal } from './MergeCategoryModal';
 
 interface CategoryManagerProps {
   categories: CustomCategory[];
@@ -16,6 +18,8 @@ export function CategoryManager({ categories, onCategoriesChange }: CategoryMana
   const [selectedParentId, setSelectedParentId] = useState<string | undefined>();
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<CustomCategory | null>(null);
+  const [showMergeModal, setShowMergeModal] = useState(false);
 
   // Memoize category hierarchy
   const categoryHierarchy = useMemo(() => buildCategoryHierarchy(categories), [categories]);
@@ -44,6 +48,25 @@ export function CategoryManager({ categories, onCategoriesChange }: CategoryMana
     }
   }, [user, onCategoriesChange]);
 
+  const handleUpdateCategory = useCallback(
+    async (id: string, data: { name: string; type?: CategoryType | null; parent_id?: string | null }) => {
+      if (!user) return;
+      await mongoApi.updateCategory(id, user.id, data);
+      onCategoriesChange();
+    },
+    [user, onCategoriesChange]
+  );
+
+  const handleMerge = useCallback(
+    async (sourceId: string, targetId: string) => {
+      if (!user) return;
+      await mongoApi.mergeCategories(user.id, sourceId, targetId);
+      onCategoriesChange();
+      setShowMergeModal(false);
+    },
+    [user, onCategoriesChange]
+  );
+
   // Memoize category tree renderer
   const renderCategoryTree = useCallback((categories: CustomCategory[], level = 0) => {
     return categories.map(category => (
@@ -52,17 +75,32 @@ export function CategoryManager({ categories, onCategoriesChange }: CategoryMana
           className="flex items-center justify-between py-2 px-4 rounded-lg hover:bg-gray-700/50 transition-colors"
           style={{ marginLeft: `${level * 1.5}rem` }}
         >
-          <div className="flex items-center">
-            <FolderTree className="h-4 w-4 text-gray-400 mr-2" />
+          <div className="flex items-center gap-2">
+            <FolderTree className="h-4 w-4 text-gray-400" />
             <span className="text-gray-200">{category.name}</span>
+            {level === 0 && category.type ? (
+              <span className="text-xs px-1.5 py-0.5 rounded bg-gray-600 text-gray-300">
+                {category.type}
+              </span>
+            ) : null}
           </div>
-          <button
-            type="button"
-            onClick={() => handleDeleteCategory(category.id)}
-            className="text-red-400 hover:text-red-300 transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setEditingCategory(category)}
+              className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-gray-600 rounded transition-colors"
+              title="Editar / Mover"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDeleteCategory(category.id)}
+              className="p-1.5 text-red-400 hover:text-red-300 hover:bg-gray-600 rounded transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
         {category.subcategories && category.subcategories.length > 0 && (
           <div className="border-l border-gray-700 ml-6">
@@ -159,11 +197,40 @@ export function CategoryManager({ categories, onCategoriesChange }: CategoryMana
       {categoryForm}
 
       <div className="border-t border-gray-700 pt-4">
-        <h3 className="text-lg font-medium text-white mb-4">Categorías Existentes</h3>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h3 className="text-lg font-medium text-white">Categorías Existentes</h3>
+          <button
+            type="button"
+            onClick={() => setShowMergeModal(true)}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-600/80 text-amber-100 hover:bg-amber-600"
+          >
+            <GitMerge className="h-4 w-4" />
+            Fusionar
+          </button>
+        </div>
+        <p className="text-sm text-gray-400 mb-3">
+          Lápiz: editar, mover o asignar tipo. Fusionar: unir dos categorías en una.
+        </p>
         <div className="space-y-2">
           {renderCategoryTree(categoryHierarchy)}
         </div>
       </div>
+
+      <EditCategoryModal
+        isOpen={!!editingCategory}
+        onClose={() => setEditingCategory(null)}
+        category={editingCategory}
+        allCategories={categories}
+        onSuccess={onCategoriesChange}
+        onUpdate={handleUpdateCategory}
+      />
+
+      <MergeCategoryModal
+        isOpen={showMergeModal}
+        onClose={() => setShowMergeModal(false)}
+        categories={categories}
+        onMerge={handleMerge}
+      />
     </div>
   );
 }
