@@ -119,13 +119,24 @@ export function TypeTable({ transactions, categories, onRefresh }: TypeTableProp
     const obligatorioPct = totalGeneral > 0 ? (obligatorioTotal / totalGeneral) * 100 : 0;
     const restoPct = totalGeneral > 0 ? (restoTotal / totalGeneral) * 100 : 0;
 
+    const monthBreakdown: Record<string, { obligatorioPct: number; restoPct: number }> = {};
+    months.forEach((m) => {
+      const total = monthTotals[m.key] || 0;
+      const oblig = typeMonthData['obligatorio']?.[m.key] || 0;
+      monthBreakdown[m.key] = {
+        obligatorioPct: total > 0 ? (oblig / total) * 100 : 0,
+        restoPct: total > 0 ? ((total - oblig) / total) * 100 : 0
+      };
+    });
+
     return {
       tableData,
       months,
       monthTotals,
       totalGeneral,
       obligatorioPct,
-      restoPct
+      restoPct,
+      monthBreakdown
     };
   }, [transactions, categories, period, excludeNegocio]);
 
@@ -232,16 +243,41 @@ export function TypeTable({ transactions, categories, onRefresh }: TypeTableProp
                   <th className="px-4 py-3 text-left">
                     <span className="text-xs font-medium uppercase text-blue-400/90">Total</span>
                   </th>
-                  {data.months.map((month) => (
-                    <th key={month.key} className="px-4 py-3 text-center">
-                      <span className="text-sm font-semibold text-blue-300 tabular-nums">
-                        ${(data.monthTotals[month.key] || 0).toLocaleString('es-CO', {
-                          maximumFractionDigits: 0,
-                          minimumFractionDigits: 0
-                        })}
-                      </span>
-                    </th>
-                  ))}
+                  {data.months.map((month) => {
+                    const total = data.monthTotals[month.key] || 0;
+                    const bd = data.monthBreakdown[month.key];
+                    return (
+                      <th key={month.key} className="px-4 py-3 text-center min-w-[100px]">
+                        <div className="inline-flex flex-col items-center gap-1">
+                          <span className="text-sm font-semibold text-blue-300 tabular-nums">
+                            ${total.toLocaleString('es-CO', {
+                              maximumFractionDigits: 0,
+                              minimumFractionDigits: 0
+                            })}
+                          </span>
+                          {total > 0 && bd && (
+                            <div className="flex flex-col items-center gap-0.5 w-full">
+                              <div className="flex w-full h-1 rounded-full overflow-hidden bg-gray-700">
+                                <div
+                                  className="bg-amber-500/80 transition-all"
+                                  style={{ width: `${bd.obligatorioPct}%` }}
+                                />
+                                <div
+                                  className="bg-emerald-500/60 transition-all"
+                                  style={{ width: `${bd.restoPct}%` }}
+                                />
+                              </div>
+                              <span className="text-[10px] text-gray-400">
+                                <span className="text-amber-400/90">{Math.round(bd.obligatorioPct)}%</span>
+                                {' · '}
+                                <span className="text-emerald-400/90">{Math.round(bd.restoPct)}%</span>
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </th>
+                    );
+                  })}
                   <th className="px-4 py-3 text-center">
                     <div className="inline-flex flex-col items-center gap-1.5">
                       <span className="inline-block px-4 py-2 rounded-xl bg-blue-500/20 text-lg font-bold text-blue-300 border border-blue-500/40 tabular-nums">

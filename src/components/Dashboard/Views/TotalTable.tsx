@@ -14,7 +14,7 @@ import {
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Transaction, CustomCategory } from '../../../types';
-import { getCategoryFullPath } from '../../../utils/categories';
+import { getCategoryFullPath, getCategoryType } from '../../../utils/categories';
 import { CellTransactionsModal } from './CellTransactionsModal';
 
 interface TotalTableProps {
@@ -132,17 +132,22 @@ export function TotalTable({ transactions, categories, onRefresh }: TotalTablePr
 
     // Total por mes (suma de todas las categorías)
     const monthTotals: Record<string, number> = {};
-    const monthTotalsSinFacebookAds: Record<string, number> = {};
-    const isFacebookAds = (cat: string) => /facebook\s*ads/i.test(cat);
+    const monthTotalsSinNegocio: Record<string, number> = {};
 
     months.forEach((month) => {
       monthTotals[month.key] = Object.keys(categoryMonthData).reduce(
         (sum, cat) => sum + (categoryMonthData[cat][month.key] || 0),
         0
       );
-      monthTotalsSinFacebookAds[month.key] = Object.keys(categoryMonthData)
-        .filter((cat) => !isFacebookAds(cat))
-        .reduce((sum, cat) => sum + (categoryMonthData[cat][month.key] || 0), 0);
+    });
+
+    // Total sin negocio: excluir categorías y subcategorías de negocio
+    months.forEach((m) => { monthTotalsSinNegocio[m.key] = 0; });
+    expenseTransactions.forEach((t) => {
+      const type = getCategoryType(t.category_id || null, categories);
+      if (type === 'negocio') return;
+      const monthKey = format(new Date(t.transaction_date), 'yyyy-MM');
+      monthTotalsSinNegocio[monthKey] = (monthTotalsSinNegocio[monthKey] || 0) + Number(t.amount);
     });
 
     return {
@@ -150,9 +155,9 @@ export function TotalTable({ transactions, categories, onRefresh }: TotalTablePr
       months,
       significantChanges,
       monthTotals,
-      monthTotalsSinFacebookAds,
+      monthTotalsSinNegocio,
       totalGeneral: Object.values(monthTotals).reduce((a, b) => a + b, 0),
-      totalSinFacebookAds: Object.values(monthTotalsSinFacebookAds).reduce((a, b) => a + b, 0)
+      totalSinNegocio: Object.values(monthTotalsSinNegocio).reduce((a, b) => a + b, 0)
     };
   }, [transactions, categories, period]);
 
@@ -301,19 +306,19 @@ export function TotalTable({ transactions, categories, onRefresh }: TotalTablePr
                   <tr className="bg-gradient-to-r from-green-950/30 to-transparent border-b border-green-800/20">
                     <th className="px-4 py-3 text-left">
                       <span className="text-xs font-medium uppercase tracking-widest text-green-400/80">
-                        Sin Facebook Ads
+                        Sin negocio
                       </span>
                     </th>
                     {data.months.map((month) => (
                       <th key={month.key} className="px-4 py-3 text-center">
                         <span className="text-sm font-medium text-green-300/90 tabular-nums">
-                          ${(data.monthTotalsSinFacebookAds[month.key] || 0).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
+                          ${(data.monthTotalsSinNegocio[month.key] || 0).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                         </span>
                       </th>
                     ))}
                     <th className="px-4 py-3 text-center">
                       <span className="inline-block px-3 py-1.5 rounded-lg bg-green-500/15 text-base font-bold text-green-300 border border-green-500/30 tabular-nums">
-                        ${(data.totalSinFacebookAds || 0).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
+                        ${(data.totalSinNegocio || 0).toLocaleString('es-CO', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}
                       </span>
                     </th>
                   </tr>
