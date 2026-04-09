@@ -10,6 +10,8 @@ export interface Transaction {
   transaction_type: 'compra con tarjeta' | 'pago por pse' | 'transferencia' | 'pago programado' | 'gasto manual';
   type: 'ingreso' | 'gasto';
   notification_email?: string;
+  /** Cuenta/ref. destino cuando viene en el correo (transferencias, PSE, etc.) */
+  destination_account?: string | null;
   custom_category?: CustomCategory;
   banco: string;
   user_id?: string;

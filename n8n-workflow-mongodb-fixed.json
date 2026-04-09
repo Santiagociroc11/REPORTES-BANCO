@@ -7,7 +7,7 @@
         "url": "https://auto-finanzas.automscc.com/api/transactions/from-notification",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ amount: $json.output?.amount ?? $json.amount, description: $json.output?.description ?? $json.description, transaction_date: $json.output?.transaction_date ?? $json.transaction_date, transaction_type: $json.output?.transaction_type ?? $json.transaction_type, type: $json.output?.type ?? $json.type, notification_email: $('Edit Fields').item.json.to_email || $('Edit Fields').item.json.To || $('Gmail Trigger1').item.json.To, banco: ($json.output?.banco ?? $json.banco) || 'bancolombia' }) }}",
+        "jsonBody": "={{ JSON.stringify({ amount: $json.output?.amount ?? $json.amount, description: $json.output?.description ?? $json.description, transaction_date: $json.output?.transaction_date ?? $json.transaction_date, transaction_type: $json.output?.transaction_type ?? $json.transaction_type, type: $json.output?.type ?? $json.type, notification_email: $('Edit Fields').item.json.to_email || $('Edit Fields').item.json.To || $('Gmail Trigger1').item.json.To, banco: ($json.output?.banco ?? $json.banco) || 'bancolombia', notification_snippet: $('Edit Fields').item.json.correo || '', destination_account: $json.output?.destination_account ?? '' }) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -47,7 +47,7 @@
     {
       "parameters": {
         "chatId": "552780004",
-        "text": "=⚡ *NUEVO MOVIMIENTO DETECTADO EN: {{ ($json.output?.banco ?? $json.banco ?? 'bancolombia').toString().toUpperCase() }}*\n\nSe acaba de registrar un nuevo movimiento con estos datos:\n\n*VALOR*: ${{ ($json.output?.amount ?? $json.amount).toLocaleString('es-CO') }}\n*DESCRIPCIÓN*: {{ $json.output?.description ?? $json.description }}\n*TIPO*: {{ $json.output?.transaction_type ?? $json.transaction_type }}\n*FECHA*: {{ ($json.output?.transaction_date ?? $json.transaction_date).toString() }}",
+        "text": "=⚡ *NUEVO MOVIMIENTO DETECTADO EN: {{ ($json.output?.banco ?? $json.banco ?? 'bancolombia').toString().toUpperCase() }}*\n\nSe acaba de registrar un nuevo movimiento con estos datos:\n\n*VALOR*: ${{ ($json.output?.amount ?? $json.amount).toLocaleString('es-CO') }}\n*DESCRIPCIÓN*: {{ $json.output?.description ?? $json.description }}\n*TIPO*: {{ $json.output?.transaction_type ?? $json.transaction_type }}\n*CUENTA DESTINO*: {{ $json.output?.destination_account || '—' }}\n*FECHA*: {{ ($json.output?.transaction_date ?? $json.transaction_date).toString() }}",
         "replyMarkup": "inlineKeyboard",
         "inlineKeyboard": {
           "rows": [
@@ -117,6 +117,11 @@
             {
               "name": "banco",
               "description": "que banco reporta en minuscula",
+              "required": true
+            },
+            {
+              "name": "destination_account",
+              "description": "Si el correo menciona destino del dinero: número de cuenta enmascarado o completo (ej *3009937799, 6138 como origen no cuenta). En transferencia saliente: cuenta a la que Transferiste. En PSE: referencia o identificador de destino si aparece. En compras o sin dato claro: cadena vacía.",
               "required": true
             }
           ]

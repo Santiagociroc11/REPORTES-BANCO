@@ -55,7 +55,7 @@
         "url": "https://auto-finanzas.automscc.com/api/transactions/from-notification",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ amount: $json.output.amount, description: $json.output.description, transaction_date: $json.output.transaction_date, transaction_type: $json.output.transaction_type, type: $json.output.type, notification_email: $('Gmail Trigger').item.json.To, banco: $json.output.banco || 'bancolombia' }) }}",
+        "jsonBody": "={{ JSON.stringify({ amount: $json.output.amount, description: $json.output.description, transaction_date: $json.output.transaction_date, transaction_type: $json.output.transaction_type, type: $json.output.type, notification_email: $('Gmail Trigger').item.json.To, banco: $json.output.banco || 'bancolombia', notification_snippet: $('Edit Fields1').item.json.correo || '', destination_account: $json.output.destination_account || '' }) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -136,6 +136,11 @@
             {
               "name": "banco",
               "description": "que banco reporta en minuscula",
+              "required": true
+            },
+            {
+              "name": "destination_account",
+              "description": "Si el correo menciona destino del dinero: cuenta destino (ej *3009937799). Transferencia saliente: cuenta a la que Transferiste. PSE: ref. si aparece. Sin dato: cadena vacía.",
               "required": true
             }
           ]

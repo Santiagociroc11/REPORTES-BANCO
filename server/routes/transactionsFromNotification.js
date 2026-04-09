@@ -8,9 +8,28 @@ const router = Router();
 const VALID_TRANSACTION_TYPES = ['compra con tarjeta', 'pago por pse', 'transferencia', 'pago programado', 'gasto manual'];
 const VALID_TYPES = ['ingreso', 'gasto'];
 
+/** Notificaciones de dinero recibido (p. ej. Bancolombia “Recibiste…”) — no deben crearse como movimiento registrable. */
+function isIncomingMoneyNotification(body) {
+  const snippet = String(body.notification_snippet ?? body.snippet ?? '').toLowerCase();
+  const desc = String(body.description ?? '').toLowerCase();
+  return snippet.includes('recibiste') || desc.includes('recibiste');
+}
+
 router.post('/', async (req, res) => {
   try {
-    let { amount, description, transaction_date, transaction_type, type, notification_email, banco } = req.body;
+    let {
+      amount,
+      description,
+      transaction_date,
+      transaction_type,
+      type,
+      notification_email,
+      banco,
+      destination_account,
+    } = req.body;
+    if (isIncomingMoneyNotification(req.body)) {
+      return res.status(200).json({ skipped: true, reason: 'incoming_transfer_notification' });
+    }
     if (!notification_email || !amount || !description || !transaction_date) {
       return res.status(400).json({ error: 'Faltan campos requeridos: notification_email, amount, description, transaction_date' });
     }
@@ -27,6 +46,10 @@ router.post('/', async (req, res) => {
 
     const amountNum = Number(amount);
     const descTrim = String(description).trim();
+    const destAcc =
+      destination_account != null && String(destination_account).trim() !== ''
+        ? String(destination_account).trim()
+        : null;
     const txDate = new Date(transaction_date);
     const from = new Date(txDate.getFullYear(), txDate.getMonth(), txDate.getDate(), txDate.getHours(), txDate.getMinutes(), 0, 0);
     const to = new Date(txDate.getFullYear(), txDate.getMonth(), txDate.getDate(), txDate.getHours(), txDate.getMinutes(), 59, 999);
@@ -52,6 +75,7 @@ router.post('/', async (req, res) => {
       type,
       notification_email: notification_email.trim(),
       banco: banco || 'Bancolombia',
+      destination_account: destAcc,
       user_id: user._id,
       reported: false,
       category_id: null,

@@ -17,7 +17,9 @@ const transactionSchema = new mongoose.Schema({
   type: { type: String, enum: ['ingreso', 'gasto'], required: true },
   user_id: { type: String, required: true },
   banco: { type: String, default: 'Bancolombia' },
-  notification_email: { type: String, default: null }
+  notification_email: { type: String, default: null },
+  /** Cuenta o ref. destino si el correo lo trae (transferencia, PSE, etc.), extraído por n8n/IA */
+  destination_account: { type: String, default: null }
 }, { timestamps: true, _id: false });
 
 transactionSchema.virtual('id').get(function() {
